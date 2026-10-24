@@ -168,7 +168,23 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
   </div>
 
   <div class="card">
-    <h2>記録を管理者に送る</h2>
+    <h2>バックアップ</h2>
+    <div class="backup">
+      <button class="btn sub" id="exportBtn">書き出す</button>
+      <button class="btn sub" id="importBtn">読み込む</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+    <div class="hint">記録はこの端末のブラウザ内に保存されます。機種変更や削除に備えて、ときどき書き出してください</div>
+  </div>
+
+  <div id="adminLink" style="text-align:center;margin:6px 0 12px"><a href="admin.html" style="color:var(--sub);font-size:13px">管理者の方はこちら(管理者ページ)</a></div>
+</section>
+
+<section id="view-report" class="view">
+  <div class="date">管理者に報告</div>
+  <p class="sub" style="margin:0 2px 14px">自分の記録を、LINEで管理者に送ります</p>
+  <div class="card">
+    <h2>LINEで管理者に報告</h2>
     <label class="fl" for="sendName">お名前(管理者が分かる名前)</label>
     <input id="sendName" class="tx" type="text" maxlength="30" placeholder="例:山田太郎" autocomplete="off">
     <label class="fl" for="sendPeriod">送る期間</label>
@@ -184,18 +200,6 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
     </div>
     <div class="hint">「LINEで送る」を押すと、LINEの送信先の選択画面が開きます。管理者(またはグループ)を選んで送信してください。開かないときは「コピー」して、LINEに貼り付けて送ってください。送られる内容は、お名前と日ごとの施光回数・受光分数だけです</div>
   </div>
-
-  <div class="card">
-    <h2>バックアップ</h2>
-    <div class="backup">
-      <button class="btn sub" id="exportBtn">書き出す</button>
-      <button class="btn sub" id="importBtn">読み込む</button>
-    </div>
-    <input type="file" id="importFile" accept="application/json,.json" hidden>
-    <div class="hint">記録はこの端末のブラウザ内に保存されます。機種変更や削除に備えて、ときどき書き出してください</div>
-  </div>
-
-  <div id="adminLink" style="text-align:center;margin:6px 0 12px"><a href="admin.html" style="color:var(--sub);font-size:13px">管理者の方はこちら(管理者ページ)</a></div>
 </section>
 
 </main>
@@ -217,6 +221,7 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
 <nav class="tabs">
   <button id="tabHome" class="active"><span class="ic">☀</span>ホーム</button>
   <button id="tabHistory"><span class="ic">📅</span>実績</button>
+  <button id="tabReport"><span class="ic">✉</span>報告</button>
 </nav>
 <div class="toast" id="toast"></div>
 

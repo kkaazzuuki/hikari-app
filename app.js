@@ -395,21 +395,27 @@
   });
 
   // ---------- タブ ----------
+  var TABS = ['home', 'history', 'report'];
   function showTab(name) {
-    $('#view-home').classList.toggle('active', name === 'home');
-    $('#view-history').classList.toggle('active', name === 'history');
-    $('#tabHome').classList.toggle('active', name === 'home');
-    $('#tabHistory').classList.toggle('active', name === 'history');
-    if (name === 'history') renderHistory(); else renderHome();
+    TABS.forEach(function (t) {
+      var cap = t.charAt(0).toUpperCase() + t.slice(1);
+      $('#view-' + t).classList.toggle('active', t === name);
+      $('#tab' + cap).classList.toggle('active', t === name);
+    });
+    if (name === 'history') renderHistory();
+    else if (name === 'report') updateSendInfo();
+    else renderHome();
     window.scrollTo(0, 0);
   }
   $('#tabHome').addEventListener('click', function () { showTab('home'); });
   $('#tabHistory').addEventListener('click', function () { showTab('history'); });
+  $('#tabReport').addEventListener('click', function () { showTab('report'); });
 
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') {
       renderHome();
       if ($('#view-history').classList.contains('active')) renderHistory();
+      if ($('#view-report').classList.contains('active')) updateSendInfo();
     }
   });
 

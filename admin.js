@@ -4,6 +4,23 @@
   var WD = ['日', '月', '火', '水', '木', '金', '土'];
   var members = {};   // 名前 -> { days: {日付: {seko, juko}}, stamps: {日付: 送信日時} }
   var open = {};      // 内訳を開いている名前
+  var STORE = 'hikari_admin_data_v1';
+
+  // 管理者の端末に保存(過去の分も残る)
+  function loadStore() {
+    try {
+      var o = JSON.parse(localStorage.getItem(STORE));
+      if (o && o.members && typeof o.members === 'object') members = o.members;
+    } catch (e) {}
+  }
+  function saveStore() {
+    try { localStorage.setItem(STORE, JSON.stringify({ version: 1, members: members })); }
+    catch (e) { $('#msg').innerHTML = '<div class="ng">× この端末に保存できませんでした</div>'; }
+  }
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
 
   function $(s) { return document.querySelector(s); }
   function esc(s) {
@@ -122,6 +139,7 @@
       if (--left) return;
       showMsgs([].concat.apply([], results));
       input.value = '';
+      saveStore();
       render();
     }
   });
@@ -132,6 +150,7 @@
     var rs = addAny(t, '貼り付け');
     showMsgs(rs);
     if (rs.some(function (r) { return r.ok; })) $('#paste').value = '';
+    saveStore();
     render();
   });
 
@@ -203,8 +222,10 @@
         var d = members[x.name].days;
         html += '<tr class="d"><td colspan="5">' + (x.list.length ? x.list.map(function (k) {
           var r = d[k];
-          return shortDate(k) + ' 施光 ' + r.seko + '回 / 受光 ' + (r.juko ? fmtMin(r.juko) : '—');
-        }).join('<br>') : 'この期間の記録はありません') + '</td></tr>';
+          return shortDate(k) + ' 施光 ' + r.seko + '回 / 受光 ' + (r.juko ? fmtMin(r.juko) : '—') +
+            ' <button class="ed" data-edit="' + esc(x.name) + '" data-k="' + k + '">修正</button>';
+        }).join('<br>') : 'この期間の記録はありません') +
+          '<br><button class="ed" data-add="' + esc(x.name) + '" style="padding-left:0">＋この人の記録を追加</button></td></tr>';
       }
     });
     html += '</tbody><tfoot><tr><td>合計</td><td class="s">' + tS + '回</td><td class="j">' + fmtMin(tJ) +
@@ -216,6 +237,10 @@
   $('#sort').addEventListener('change', render);
 
   $('#table').addEventListener('click', function (e) {
+    var ed = e.target.closest('button[data-edit]');
+    if (ed) { openEdit(ed.getAttribute('data-edit'), ed.getAttribute('data-k')); return; }
+    var ad = e.target.closest('button[data-add]');
+    if (ad) { openEdit(ad.getAttribute('data-add'), null); return; }
     var tr = e.target.closest('tr.m');
     if (!tr) return;
     var n = tr.getAttribute('data-n');
@@ -227,18 +252,20 @@
     var b = e.target.closest('button[data-n]');
     if (!b) return;
     var n = b.getAttribute('data-n');
-    if (!confirm(n + 'さんの記録を読み込みから外しますか?')) return;
+    if (!confirm(n + 'さんの保存済みの記録を、すべて削除します。元に戻せません。よろしいですか?')) return;
     delete members[n];
     delete open[n];
     $('#msg').innerHTML = '';
+    saveStore();
     render();
   });
 
   $('#clear').addEventListener('click', function () {
-    if (!confirm('読み込んだ記録をすべてクリアしますか?')) return;
+    if (!confirm('保存済みの全メンバーの記録を、すべて削除します。元に戻せません。よろしいですか?')) return;
     members = {};
     open = {};
     $('#msg').innerHTML = '';
+    saveStore();
     render();
   });
 
@@ -260,6 +287,110 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   });
 
+  // ---------- 手入力・修正 ----------
+  function openEdit(name, key) {
+    $('#eTitle').textContent = name ? name + 'さんの記録' : 'メンバーを追加';
+    $('#eName').value = name || '';
+    $('#eName').readOnly = !!name;
+    $('#eNames').innerHTML = Object.keys(members).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('');
+    $('#eDate').max = todayStr();
+    $('#eDate').value = key || todayStr();
+    fillEdit();
+    $('#eDlg').showModal();
+  }
+  function fillEdit() {
+    var n = $('#eName').value.trim(), k = $('#eDate').value;
+    var r = (members[n] && members[n].days[k]) || null;
+    $('#eSeko').value = r ? r.seko : 0;
+    $('#eJuko').value = r && r.juko ? r.juko : '';
+    $('#ePrev').textContent = r ? 'この日の記録があります。保存すると上書きされます' : 'この日の記録はまだありません(新しく追加されます)';
+  }
+  $('#addMember').addEventListener('click', function () { openEdit(null, null); });
+  $('#eDate').addEventListener('change', fillEdit);
+  $('#eName').addEventListener('change', fillEdit);
+  $('#eClose').addEventListener('click', function () { $('#eDlg').close(); });
+  $('#eSave').addEventListener('click', function () {
+    var name = $('#eName').value.trim().slice(0, 40);
+    var k = $('#eDate').value;
+    if (!name) { alert('名前を入力してください'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) { alert('日付を選んでください'); return; }
+    var seko = clamp($('#eSeko').value, 9999);
+    var juko = clamp($('#eJuko').value, 1440) || null;
+    var m = members[name] || (members[name] = { days: {}, stamps: {} });
+    if (!seko && juko == null) { delete m.days[k]; delete m.stamps[k]; }
+    else { m.days[k] = { seko: seko, juko: juko }; m.stamps[k] = new Date().toISOString(); }
+    saveStore();
+    $('#eDlg').close();
+    $('#msg').innerHTML = '<div class="ok">✓ ' + esc(name) + 'さんの ' + esc(shortDate(k)) + ' を保存しました</div>';
+    render();
+  });
+  $('#eDel').addEventListener('click', function () {
+    var name = $('#eName').value.trim(), k = $('#eDate').value;
+    var m = members[name];
+    if (!m || !m.days[k]) { alert('この日の記録はありません'); return; }
+    if (!confirm(name + 'さんの ' + shortDate(k) + ' の記録を消しますか?')) return;
+    delete m.days[k];
+    delete m.stamps[k];
+    saveStore();
+    $('#eDlg').close();
+    render();
+  });
+
+  // ---------- バックアップ ----------
+  $('#bkOut').addEventListener('click', function () {
+    var blob = new Blob([JSON.stringify({ app: 'hikari-admin', version: 1, members: members }, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'hikari-admin-' + todayStr() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  });
+  $('#bkIn').addEventListener('click', function () { $('#bkFile').click(); });
+  $('#bkFile').addEventListener('change', function () {
+    var input = this, f = input.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      try {
+        var o = JSON.parse(String(rd.result));
+        if (!o || o.app !== 'hikari-admin' || !o.members) throw new Error('bad');
+        var names = Object.keys(o.members), n = 0;
+        if (!confirm(names.length + '人分のバックアップを読み込みます。同じ日の記録は、新しいほうが残ります。よろしいですか?')) return;
+        names.forEach(function (nm) {
+          var src = o.members[nm] || {};
+          var days = src.days || {}, st = src.stamps || {};
+          var entries = [];
+          Object.keys(days).forEach(function (k) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
+            var r = days[k] || {};
+            var j = (r.juko == null) ? null : clamp(r.juko, 1440);
+            entries.push({ k: k, seko: clamp(r.seko, 9999), juko: j || null, stamp: String(st[k] || '') });
+          });
+          var name = String(nm).trim().slice(0, 40);
+          if (!name) return;
+          if (!members[name]) members[name] = { days: {}, stamps: {} };
+          entries.forEach(function (e) {
+            if (!e.seko && e.juko == null) return;
+            var m = members[name];
+            if (m.stamps[e.k] && m.stamps[e.k] > e.stamp) return;
+            m.days[e.k] = { seko: e.seko, juko: e.juko };
+            m.stamps[e.k] = e.stamp;
+            n++;
+          });
+        });
+        saveStore();
+        $('#msg').innerHTML = '<div class="ok">✓ バックアップを読み込みました(' + n + '日分)</div>';
+        render();
+      } catch (e) {
+        $('#msg').innerHTML = '<div class="ng">× バックアップファイルを読み込めませんでした</div>';
+      }
+      input.value = '';
+    };
+    rd.readAsText(f);
+  });
+
   // ---------- 管理者の確認(パスコード) ----------
   var SALT = 'hikari-ba39f40854a87c8c', ITER = 100000, HASH = '3f63ff1e7cb4f41f1ade1fba01281b105a8c905f607fbaabff692d7ef819ab0a', LSKEY = 'hikari_admin_key';
   function derive(pass) {
@@ -273,6 +404,7 @@
   function unlock() {
     $('#lock').hidden = true;
     $('#content').hidden = false;
+    loadStore();
     render();
   }
   function tryUnlock() {

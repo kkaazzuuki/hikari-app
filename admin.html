@@ -52,6 +52,12 @@ tr.d td{background:var(--bg);text-align:left;white-space:normal;font-size:13px;l
 tfoot td{font-weight:700;border-top:2px solid var(--line)}
 .empty{color:var(--sub);text-align:center;padding:24px 0;font-size:14px}
 .note{font-size:12px;color:var(--sub);line-height:1.7;margin-top:10px}
+dialog{border:none;border-radius:16px;padding:20px;width:min(92vw,420px);background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h3{margin:0 0 6px}
+dialog label{display:block;font-size:13px;color:var(--sub);margin:12px 0 4px}
+dialog input{width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:inherit}
+.ed{border:none;background:transparent;color:var(--blue);font-size:13px;cursor:pointer;text-decoration:underline;padding:0 6px}
 </style>
 </head>
 <body>
@@ -67,7 +73,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 
   <div id="content" hidden>
   <h1>光の記録 管理者ページ</h1>
-  <p class="sub">メンバーからLINEで届いた記録を読み込んで集計します。読み込んだ内容はこの画面を閉じると消えます(どこにも保存・送信されません)</p>
+  <p class="sub">メンバーからLINEで届いた記録を読み込んで集計します。読み込んだ記録は、この端末に保存されます(過去の分も残り、同じ人から新しく届くと更新されます)</p>
 
   <div class="card">
     <h2>記録を読み込む</h2>
@@ -76,6 +82,8 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
     <textarea id="paste" placeholder="LINEで届いた記録をここに貼り付けて「追加」を押します"></textarea>
     <div class="row"><button class="btn" id="addPaste">追加</button></div>
     <div class="msg" id="msg"></div>
+    <div class="row" style="margin-top:10px"><button class="btn line" id="addMember">メンバーを手入力で追加</button></div>
+    <div class="note" style="margin-top:12px">保存済みのメンバー(×で、その人の記録をすべて削除)</div>
     <div class="chips" id="chips"></div>
   </div>
 
@@ -93,14 +101,43 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
     </div>
     <div class="grid" id="summary"></div>
     <div class="tw" style="margin-top:12px"><table id="table"></table></div>
-    <div class="note">名前の行をタップすると、日ごとの内訳が開きます。</div>
+    <div class="note">名前の行をタップすると、日ごとの内訳が開きます。内訳から、記録の修正・追加ができます。</div>
     <div class="row" style="margin-top:12px">
       <button class="btn line" id="csv">CSVで書き出す</button>
-      <button class="btn danger" id="clear">すべてクリア</button>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>バックアップ</h2>
+    <div class="row">
+      <button class="btn line" id="bkOut">管理データを書き出す</button>
+      <button class="btn line" id="bkIn">読み込む</button>
+      <input type="file" id="bkFile" accept=".json,application/json" hidden>
+    </div>
+    <div class="note">保存先はこの端末のブラウザの中です。端末の変更や、ブラウザのデータ削除に備えて、ときどき書き出してください。</div>
+    <div class="row" style="margin-top:14px"><button class="btn danger" id="clear">保存済みの記録をすべて削除</button></div>
   </div>
   </div>
 </main>
+<dialog id="eDlg">
+  <h3 id="eTitle">記録の入力</h3>
+  <label for="eName">名前</label>
+  <input id="eName" type="text" maxlength="40" list="eNames" autocomplete="off">
+  <datalist id="eNames"></datalist>
+  <label for="eDate">日付</label>
+  <input id="eDate" type="date">
+  <label for="eSeko">施光(回)</label>
+  <input id="eSeko" type="number" inputmode="numeric" min="0" max="9999">
+  <label for="eJuko">受光(その日の合計・分)</label>
+  <input id="eJuko" type="number" inputmode="numeric" min="0" max="1440" placeholder="未記録">
+  <div class="note" id="ePrev"></div>
+  <div class="row" style="margin-top:16px">
+    <button class="btn" id="eSave">保存</button>
+    <button class="btn danger" id="eDel">この日を消す</button>
+    <button class="btn line" id="eClose">閉じる</button>
+  </div>
+</dialog>
+
 <script src="admin.js"></script>
 </body>
 </html>
