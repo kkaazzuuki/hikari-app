@@ -74,31 +74,61 @@
 
   // ---------- ホーム ----------
   var todayKey = keyOf(new Date());
+  var selKey = null; // 入力する日(null = 今日)
+  function curKey() { return selKey || todayKey; }
+  function shiftKey(k, delta) {
+    var p = k.split('-');
+    return keyOf(new Date(+p[0], +p[1] - 1, +p[2] + delta));
+  }
+  function setSel(k) {
+    selKey = (!k || k >= todayKey) ? null : k;
+    $('#jukoInput').value = '';
+    renderHome();
+  }
 
   function renderHome() {
-    var d = new Date();
-    todayKey = keyOf(d);
-    $('#todayLabel').textContent = d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日(' + WD[d.getDay()] + ')';
-    var r = rec(todayKey);
+    todayKey = keyOf(new Date());
+    if (selKey && selKey >= todayKey) selKey = null;
+    var key = curKey();
+    var p = key.split('-');
+    var dt = new Date(+p[0], +p[1] - 1, +p[2]);
+    $('#todayLabel').textContent = p[0] + '年' + (+p[1]) + '月' + (+p[2]) + '日(' + WD[dt.getDay()] + ')' + (selKey ? '' : ' 今日');
+    $('#dateInput').max = todayKey;
+    $('#dateInput').value = key;
+    $('#dNext').disabled = !selKey;
+    $('#dToday').style.display = selKey ? 'inline-block' : 'none';
+    $('#sekoTitle').textContent = selKey ? 'この日の回数' : '今日の回数(何回でもOK)';
+
+    var r = rec(key);
     if (document.activeElement !== $('#sekoInput')) $('#sekoInput').value = r.seko;
     $('#jukoState').innerHTML = r.juko == null
-      ? '<span class="pill off">本日は未記録</span>'
-      : '<span class="pill on">記録済み:' + fmtMin(r.juko) + '</span>';
-    if (document.activeElement !== $('#jukoInput')) $('#jukoInput').value = r.juko == null ? '' : r.juko;
+      ? '<span class="pill off">' + (selKey ? 'この日' : '本日') + 'は未記録</span>'
+      : '<span class="pill on">' + (selKey ? 'この日' : '本日') + 'の合計:' + fmtMin(r.juko) + '</span>';
     updateJukoPreview();
-    var prefix = todayKey.slice(0, 8);
+
+    var prefix = key.slice(0, 8);
+    $('#homeStatsTitle').textContent = (+p[1]) + '月のまとめ';
     $('#homeStats').innerHTML = statsBlock(sumRange(function (k) { return k.indexOf(prefix) === 0; }));
   }
   function updateJukoPreview() {
     var v = $('#jukoInput').value;
-    $('#jukoPreview').textContent = v === '' ? '' : '＝ ' + fmtMin(clampInt(v, MAX_JUKO));
+    $('#jukoPreview').textContent = v === '' ? '' : '＝ ' + fmtMin(clampInt(v, MAX_JUKO)) + ' を追加';
   }
   function changeSeko(delta) {
-    var r = rec(todayKey);
+    var key = curKey();
+    var r = rec(key);
     r.seko = Math.max(0, Math.min(MAX_SEKO, r.seko + delta));
-    setRec(todayKey, r);
+    setRec(key, r);
     renderHome();
   }
+
+  $('#dPrev').addEventListener('click', function () { setSel(shiftKey(curKey(), -1)); });
+  $('#dNext').addEventListener('click', function () { setSel(shiftKey(curKey(), 1)); });
+  $('#dToday').addEventListener('click', function () { setSel(null); });
+  $('#dateInput').addEventListener('change', function () {
+    if (!this.value) { renderHome(); return; }
+    setSel(this.value);
+  });
 
   $('#sekoPlus').addEventListener('click', function () {
     changeSeko(1);
@@ -106,9 +136,10 @@
   });
   $('#sekoMinus').addEventListener('click', function () { changeSeko(-1); });
   $('#sekoInput').addEventListener('change', function () {
-    var r = rec(todayKey);
+    var key = curKey();
+    var r = rec(key);
     r.seko = clampInt(this.value, MAX_SEKO);
-    setRec(todayKey, r);
+    setRec(key, r);
     renderHome();
   });
   $('#sekoInput').addEventListener('focus', function () { this.select(); });
@@ -121,23 +152,39 @@
       updateJukoPreview();
     });
   });
+  // 受光は「1日の合計分数」。追加するたびに、その日の合計へ足していく
   $('#jukoSave').addEventListener('click', function () {
-    var v = clampInt($('#jukoInput').value, MAX_JUKO);
-    if (v < 1) { toast('受光した分数を入力してください'); return; }
-    var r = rec(todayKey);
-    r.juko = v;
-    setRec(todayKey, r);
+    var add = clampInt($('#jukoInput').value, MAX_JUKO);
+    if (add < 1) { toast('追加する分数を入力してください'); return; }
+    var key = curKey();
+    var r = rec(key);
+    var total = (r.juko || 0) + add;
+    if (total > MAX_JUKO) { toast('1日の合計は24時間(1440分)までです'); return; }
+    r.juko = total;
+    setRec(key, r);
+    $('#jukoInput').value = '';
     $('#jukoInput').blur();
     renderHome();
-    toast('受光 ' + fmtMin(v) + ' を記録しました');
+    toast(fmtMin(add) + ' を追加しました(合計 ' + fmtMin(total) + ')');
+  });
+  $('#jukoEdit').addEventListener('click', function () {
+    var key = curKey();
+    var r = rec(key);
+    var s = prompt('この日の受光の合計(分)を入力してください(0で消去)', r.juko || 0);
+    if (s === null) return;
+    var v = clampInt(s, MAX_JUKO);
+    r.juko = v > 0 ? v : null;
+    setRec(key, r);
+    renderHome();
+    toast(v > 0 ? '合計を ' + fmtMin(v) + ' に修正しました' : '受光の記録を消しました');
   });
   $('#jukoClear').addEventListener('click', function () {
-    var r = rec(todayKey);
-    if (r.juko == null) { toast('今日の受光は未記録です'); return; }
-    if (!confirm('今日の受光記録を消しますか?')) return;
+    var key = curKey();
+    var r = rec(key);
+    if (r.juko == null) { toast('この日の受光は未記録です'); return; }
+    if (!confirm('この日の受光記録を消しますか?')) return;
     r.juko = null;
-    setRec(todayKey, r);
-    $('#jukoInput').value = '';
+    setRec(key, r);
     renderHome();
   });
 

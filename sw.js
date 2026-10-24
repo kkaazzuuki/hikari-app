@@ -1,4 +1,4 @@
-var CACHE = 'hikari-v4';
+var CACHE = 'hikari-v5';
 var ASSETS = ['./', 'index.html', 'app.js', 'manifest.json', 'admin.html', 'admin.js', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', function (e) {

@@ -95,25 +95,35 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
 <main>
 
 <section id="view-home" class="view active">
-  <div class="date" id="todayLabel"></div>
-
-  <div class="card">
-    <h2>施光<small>今日の回数(何回でもOK)</small></h2>
-    <div class="counter">
-      <button class="round" id="sekoMinus" aria-label="1回減らす">−</button>
-      <input id="sekoInput" type="number" inputmode="numeric" min="0" max="9999" value="0" aria-label="今日の施光回数">
-      <button class="round plus" id="sekoPlus" aria-label="1回増やす">＋</button>
+  <div class="nav" style="margin-bottom:6px">
+    <button id="dPrev" aria-label="前の日">◀</button>
+    <div style="text-align:center">
+      <div class="date" id="todayLabel" style="margin:0"></div>
+      <input type="date" id="dateInput" class="tx" style="margin-top:6px;font-size:15px;padding:6px 10px;width:auto" aria-label="記録する日を選ぶ">
     </div>
-    <div class="hint">＋で1回追加／数字をタップして直接入力もできます</div>
+    <button id="dNext" aria-label="次の日">▶</button>
+  </div>
+  <div style="text-align:center;margin-bottom:12px;min-height:22px">
+    <button class="link" id="dToday" style="display:none;margin:0">今日にもどる</button>
   </div>
 
   <div class="card">
-    <h2>受光<small>1日1回・分で入力</small></h2>
+    <h2>施光<small id="sekoTitle">今日の回数(何回でもOK)</small></h2>
+    <div class="counter">
+      <button class="round" id="sekoMinus" aria-label="1回減らす">−</button>
+      <input id="sekoInput" type="number" inputmode="numeric" min="0" max="9999" value="0" aria-label="施光回数">
+      <button class="round plus" id="sekoPlus" aria-label="1回増やす">＋</button>
+    </div>
+    <div class="hint">＋で1回追加／数字をタップして直接入力もできます。日付の◀▶や日付欄で、入力する日を変えられます</div>
+  </div>
+
+  <div class="card">
+    <h2>受光<small>1日の合計分数</small></h2>
     <div id="jukoState"></div>
     <div class="row">
-      <input id="jukoInput" type="number" inputmode="numeric" min="1" max="1440" placeholder="受光した分数" aria-label="受光時間(分)">
+      <input id="jukoInput" type="number" inputmode="numeric" min="1" max="1440" placeholder="追加する分数" aria-label="追加する受光時間(分)">
       <span>分</span>
-      <button class="btn" id="jukoSave">記録する</button>
+      <button class="btn" id="jukoSave">追加する</button>
     </div>
     <div class="chips">
       <button class="chip" data-add="15">+15</button>
@@ -122,11 +132,15 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
       <button class="chip" data-add="120">+120</button>
     </div>
     <div class="preview" id="jukoPreview"></div>
-    <button class="link" id="jukoClear">今日の受光記録を消す</button>
+    <div class="hint" style="text-align:left;margin-top:0">何回かに分けて受光したときは、そのつど「追加する」を押すと、1日の合計になります</div>
+    <div class="row" style="gap:16px">
+      <button class="link" id="jukoEdit">合計を修正する</button>
+      <button class="link" id="jukoClear">この日の受光を消す</button>
+    </div>
   </div>
 
   <div class="card">
-    <h2>今月のまとめ</h2>
+    <h2 id="homeStatsTitle">今月のまとめ</h2>
     <div class="grid2" id="homeStats"></div>
   </div>
 </section>
