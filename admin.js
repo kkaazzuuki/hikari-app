@@ -30,7 +30,39 @@
   }
 
   // ---------- 読み込み ----------
-  function addPayload(raw) {
+  function merge(name, entries, stamp) {
+    var m = members[name] || (members[name] = { days: {}, stamps: {} });
+    var n = 0;
+    entries.forEach(function (e) {
+      if (!e.seko && e.juko == null) return;
+      if (m.stamps[e.k] && m.stamps[e.k] > stamp) return; // 新しい送信を優先
+      m.days[e.k] = { seko: e.seko, juko: e.juko };
+      m.stamps[e.k] = stamp;
+      n++;
+    });
+    return n;
+  }
+
+  // LINEで届く文章形式(複数人分が連なっていてもOK)
+  function addTextBlock(block) {
+    var nm = /名前[:\uff1a]\s*(.+)/.exec(block);
+    if (!nm) return { ok: false, msg: 'お名前が見つかりません' };
+    var name = nm[1].trim().slice(0, 40);
+    var st = /送信[:\uff1a]\s*(\S+)/.exec(block);
+    var stamp = st ? st[1] : '';
+    var re = /(\d{4}-\d{2}-\d{2})\s*施光\s*(\d+)\s*回(?:\s*受光\s*(\d+)\s*分)?/g;
+    var entries = [], x;
+    while ((x = re.exec(block))) {
+      var juko = x[3] ? clamp(x[3], 1440) : null;
+      if (juko === 0) juko = null;
+      entries.push({ k: x[1], seko: clamp(x[2], 9999), juko: juko });
+    }
+    if (!entries.length) return { ok: false, msg: name + 'さんの記録が見つかりません' };
+    return { ok: true, name: name, n: merge(name, entries, stamp) };
+  }
+
+  // ファイル書き出し(旧形式JSON)
+  function addJson(raw) {
     var a = raw.indexOf('{'), b = raw.lastIndexOf('}');
     if (a < 0 || b < a) return { ok: false, msg: '読み取れませんでした' };
     var obj;
@@ -40,22 +72,27 @@
     }
     var name = String(obj.name || '').trim().slice(0, 40);
     if (!name) return { ok: false, msg: 'お名前が入っていません' };
-    var stamp = String(obj.exportedAt || '');
-    var m = members[name] || (members[name] = { days: {}, stamps: {} });
-    var n = 0;
+    var entries = [];
     for (var k in obj.data) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
       var r = obj.data[k] || {};
-      var seko = clamp(r.seko, 9999);
       var juko = (r.juko == null) ? null : clamp(r.juko, 1440);
       if (juko === 0) juko = null;
-      if (!seko && juko == null) continue;
-      if (m.stamps[k] && m.stamps[k] > stamp) continue; // 新しい送信を優先
-      m.days[k] = { seko: seko, juko: juko };
-      m.stamps[k] = stamp;
-      n++;
+      entries.push({ k: k, seko: clamp(r.seko, 9999), juko: juko });
     }
-    return { ok: true, name: name, n: n };
+    return { ok: true, name: name, n: merge(name, entries, String(obj.exportedAt || '')) };
+  }
+
+  // 文章でもJSONでも読み込む。結果は人数分の配列で返す
+  function addAny(raw, label) {
+    var res = [];
+    if (raw.indexOf('【光の記録】') >= 0) {
+      raw.split('【光の記録】').slice(1).forEach(function (blk) { res.push(addTextBlock(blk)); });
+    } else {
+      res.push(addJson(raw));
+    }
+    res.forEach(function (r) { r.label = label; });
+    return res;
   }
 
   function showMsgs(list) {
@@ -75,17 +112,15 @@
     files.forEach(function (f, i) {
       var rd = new FileReader();
       rd.onload = function () {
-        var r = addPayload(String(rd.result));
-        r.label = f.name;
-        results[i] = r;
+        results[i] = addAny(String(rd.result), f.name);
         done();
       };
-      rd.onerror = function () { results[i] = { ok: false, label: f.name, msg: '開けませんでした' }; done(); };
+      rd.onerror = function () { results[i] = [{ ok: false, label: f.name, msg: '開けませんでした' }]; done(); };
       rd.readAsText(f);
     });
     function done() {
       if (--left) return;
-      showMsgs(results);
+      showMsgs([].concat.apply([], results));
       input.value = '';
       render();
     }
@@ -94,10 +129,9 @@
   $('#addPaste').addEventListener('click', function () {
     var t = $('#paste').value;
     if (!t.trim()) return;
-    var r = addPayload(t);
-    r.label = '貼り付け';
-    showMsgs([r]);
-    if (r.ok) $('#paste').value = '';
+    var rs = addAny(t, '貼り付け');
+    showMsgs(rs);
+    if (rs.some(function (r) { return r.ok; })) $('#paste').value = '';
     render();
   });
 

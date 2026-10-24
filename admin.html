@@ -57,13 +57,13 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 <body>
 <main>
   <h1>光の記録 管理者ページ</h1>
-  <p class="sub">メンバーから届いた記録を読み込んで集計します。読み込んだ内容はこの画面を閉じると消えます(どこにも保存・送信されません)</p>
+  <p class="sub">メンバーからLINEで届いた記録を読み込んで集計します。読み込んだ内容はこの画面を閉じると消えます(どこにも保存・送信されません)</p>
 
   <div class="card">
     <h2>記録を読み込む</h2>
     <input type="file" id="files" multiple accept=".txt,.json,text/plain,application/json">
-    <div class="note">メンバーから届いたファイルを、まとめて選べます。</div>
-    <textarea id="paste" placeholder="ファイルではなく文字で届いた場合は、ここに貼り付けて「追加」を押します"></textarea>
+    <div class="note">LINEの届いたメッセージをコピーして、下の欄に貼り付けるだけで読み込めます。複数人分をまとめて貼り付けてもOKです。LINEのグループの「トーク履歴を送信」で書き出したファイルも、そのまま選べます。</div>
+    <textarea id="paste" placeholder="LINEで届いた記録をここに貼り付けて「追加」を押します"></textarea>
     <div class="row"><button class="btn" id="addPaste">追加</button></div>
     <div class="msg" id="msg"></div>
     <div class="chips" id="chips"></div>

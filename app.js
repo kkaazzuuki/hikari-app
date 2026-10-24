@@ -285,7 +285,7 @@
     reader.readAsText(f);
   });
 
-  // ---------- 管理者へ送る ----------
+  // ---------- 管理者へ送る(LINE) ----------
   var NAME_KEY = 'hikari_name';
   function getName() { try { return localStorage.getItem(NAME_KEY) || ''; } catch (e) { return ''; } }
   function setName(v) { try { localStorage.setItem(NAME_KEY, v); } catch (e) {} }
@@ -298,57 +298,49 @@
     }
     return null;
   }
-  function buildPayload() {
+  function sendKeys() {
     var prefix = periodPrefix($('#sendPeriod').value);
-    var out = {}, n = 0;
-    for (var k in data) {
-      if (prefix && k.indexOf(prefix) !== 0) continue;
-      out[k] = data[k]; n++;
-    }
-    return {
-      obj: { app: 'hikari', version: 1, name: $('#sendName').value.trim(), exportedAt: new Date().toISOString(), data: out },
-      days: n
-    };
+    return Object.keys(data).filter(function (k) {
+      return !prefix || k.indexOf(prefix) === 0;
+    }).sort();
+  }
+  function buildText() {
+    var keys = sendKeys();
+    var lines = ['【光の記録】', '名前:' + $('#sendName').value.trim(), '送信:' + new Date().toISOString()];
+    keys.forEach(function (k) {
+      var r = data[k];
+      lines.push(k + ' 施光' + (r.seko || 0) + '回' + (r.juko ? ' 受光' + r.juko + '分' : ''));
+    });
+    return { text: lines.join('\n'), days: keys.length };
   }
   function updateSendInfo() {
     if (document.activeElement !== $('#sendName')) $('#sendName').value = getName();
-    $('#sendInfo').textContent = '送る記録:' + buildPayload().days + '日分';
+    $('#sendInfo').textContent = '送る記録:' + sendKeys().length + '日分';
   }
-  function readyPayload() {
-    var p = buildPayload();
-    if (!p.obj.name) { toast('お名前を入力してください'); $('#sendName').focus(); return null; }
+  function readyText() {
+    if (!$('#sendName').value.trim()) { toast('お名前を入力してください'); $('#sendName').focus(); return null; }
+    var p = buildText();
     if (!p.days) { toast('その期間の記録がありません'); return null; }
-    return JSON.stringify(p.obj);
+    return p.text;
   }
   $('#sendName').addEventListener('input', function () { setName(this.value.trim()); });
   $('#sendPeriod').addEventListener('change', updateSendInfo);
   $('#sendBtn').addEventListener('click', function () {
-    var text = readyPayload();
+    var text = readyText();
     if (!text) return;
-    var name = $('#sendName').value.trim().replace(/[\\\/:*?"<>|\s]/g, '');
-    var fname = 'hikari-' + (name || 'user') + '-' + keyOf(new Date()) + '.txt';
-    var file = null;
-    try { file = new File([text], fname, { type: 'text/plain' }); } catch (e) {}
-    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file], title: '光の記録(' + $('#sendName').value.trim() + ')' }).catch(function (e) {
-        if (e && e.name !== 'AbortError') toast('送れませんでした。「コピー」をお使いください');
-      });
-    } else {
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
-      a.download = fname;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      toast('ファイルを保存しました。管理者に送ってください');
+    var url = 'https://line.me/R/msg/text/?' + encodeURIComponent(text);
+    if (url.length > 7000) {
+      toast('記録が多すぎます。期間を短くするか「コピー」をお使いください');
+      return;
     }
+    location.href = url;
   });
   $('#copyBtn').addEventListener('click', function () {
-    var text = readyPayload();
+    var text = readyText();
     if (!text) return;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(
-        function () { toast('コピーしました。管理者に貼り付けて送ってください'); },
+        function () { toast('コピーしました。LINEに貼り付けて送ってください'); },
         function () { toast('コピーできませんでした'); });
     } else {
       toast('コピーできませんでした');
