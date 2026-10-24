@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1f2a44">
+<title>光の記録 管理者</title>
+<style>
+:root{
+  --bg:#f6f3ec;--card:#ffffff;--ink:#222;--sub:#6b6b6b;--line:#e6e1d6;
+  --gold:#b37a00;--blue:#2c5fa8;--bluebg:#e3edfb;--btn:#1f2a44;--btnink:#fff;--danger:#b3261e;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#12151c;--card:#1c212c;--ink:#eee;--sub:#9aa0ac;--line:#2c3342;
+    --gold:#f0b429;--blue:#7fb0f5;--bluebg:#15263f;--btn:#e8c872;--btnink:#1b1b1b;--danger:#f2b8b5}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px 16px 48px}
+h1{font-size:20px;margin:4px 2px 4px}
+.sub{color:var(--sub);font-size:13px;margin:0 2px 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:17px}
+.btn{background:var(--btn);color:var(--btnink);border:none;border-radius:10px;padding:11px 16px;font-size:15px;font-weight:700;cursor:pointer}
+.btn.line{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+textarea,select{width:100%;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:inherit}
+textarea{min-height:80px;margin:8px 0}
+input[type=file]{font-size:14px;max-width:100%}
+.msg{font-size:13px;margin-top:8px;line-height:1.6}
+.msg .ok{color:var(--blue)}.msg .ng{color:var(--danger)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--bluebg);color:var(--blue);border-radius:999px;padding:5px 6px 5px 12px;font-size:13px}
+.chip button{border:none;background:transparent;color:inherit;font-size:16px;cursor:pointer;padding:0 6px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--bg);border-radius:12px;padding:10px 12px}
+.stat .l{font-size:12px;color:var(--sub)}.stat .v{font-size:20px;font-weight:700;margin-top:2px}
+.stat .v.g{color:var(--gold)}.stat .v.b{color:var(--blue)}
+.ctl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.ctl label{font-size:12px;color:var(--sub);display:block;margin-bottom:4px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:12px;color:var(--sub);font-weight:600}
+tr.m{cursor:pointer}
+td.s{color:var(--gold);font-weight:700}td.j{color:var(--blue)}
+tr.d td{background:var(--bg);text-align:left;white-space:normal;font-size:13px;line-height:1.8}
+tfoot td{font-weight:700;border-top:2px solid var(--line)}
+.empty{color:var(--sub);text-align:center;padding:24px 0;font-size:14px}
+.note{font-size:12px;color:var(--sub);line-height:1.7;margin-top:10px}
+</style>
+</head>
+<body>
+<main>
+  <h1>光の記録 管理者ページ</h1>
+  <p class="sub">メンバーから届いた記録を読み込んで集計します。読み込んだ内容はこの画面を閉じると消えます(どこにも保存・送信されません)</p>
+
+  <div class="card">
+    <h2>記録を読み込む</h2>
+    <input type="file" id="files" multiple accept=".txt,.json,text/plain,application/json">
+    <div class="note">メンバーから届いたファイルを、まとめて選べます。</div>
+    <textarea id="paste" placeholder="ファイルではなく文字で届いた場合は、ここに貼り付けて「追加」を押します"></textarea>
+    <div class="row"><button class="btn" id="addPaste">追加</button></div>
+    <div class="msg" id="msg"></div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="card" id="result" hidden>
+    <h2>集計</h2>
+    <div class="ctl">
+      <div><label for="period">期間</label><select id="period"></select></div>
+      <div><label for="sort">並べ替え</label>
+        <select id="sort">
+          <option value="name">名前順</option>
+          <option value="seko">施光が多い順</option>
+          <option value="juko">受光時間が長い順</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid" id="summary"></div>
+    <div class="tw" style="margin-top:12px"><table id="table"></table></div>
+    <div class="note">名前の行をタップすると、日ごとの内訳が開きます。</div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn line" id="csv">CSVで書き出す</button>
+      <button class="btn danger" id="clear">すべてクリア</button>
+    </div>
+  </div>
+</main>
+<script src="admin.js"></script>
+</body>
+</html>

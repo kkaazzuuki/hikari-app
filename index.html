@@ -87,6 +87,8 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#222;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10}
 .toast.show{opacity:.95}
 .backup{display:flex;gap:8px}.backup .btn{flex:1;font-size:14px}
+.fl{display:block;font-size:13px;color:var(--sub);margin:12px 0 4px}
+.tx{width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:inherit}
 </style>
 </head>
 <body>
@@ -149,6 +151,24 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
   <div class="card">
     <h2>全期間</h2>
     <div class="grid2" id="allStats"></div>
+  </div>
+
+  <div class="card">
+    <h2>記録を管理者に送る</h2>
+    <label class="fl" for="sendName">お名前(管理者が分かる名前)</label>
+    <input id="sendName" class="tx" type="text" maxlength="30" placeholder="例:山田太郎" autocomplete="off">
+    <label class="fl" for="sendPeriod">送る期間</label>
+    <select id="sendPeriod" class="tx">
+      <option value="this">今月</option>
+      <option value="last">先月</option>
+      <option value="all">全期間</option>
+    </select>
+    <div class="preview" id="sendInfo"></div>
+    <div class="backup">
+      <button class="btn" id="sendBtn">送る</button>
+      <button class="btn sub" id="copyBtn">コピー</button>
+    </div>
+    <div class="hint">「送る」でLINEなどを選んで管理者に送ります。送れないときは「コピー」して貼り付けてください。送られる内容は、お名前と日ごとの施光回数・受光分数だけです</div>
   </div>
 
   <div class="card">

@@ -154,6 +154,7 @@
 
     $('#monthStats').innerHTML = statsBlock(sumRange(function (k) { return k.indexOf(prefix) === 0; }));
     $('#allStats').innerHTML = statsBlock(sumRange(function () { return true; }));
+    updateSendInfo();
 
     var first = new Date(y, m, 1).getDay();
     var days = new Date(y, m + 1, 0).getDate();
@@ -282,6 +283,76 @@
       input.value = '';
     };
     reader.readAsText(f);
+  });
+
+  // ---------- 管理者へ送る ----------
+  var NAME_KEY = 'hikari_name';
+  function getName() { try { return localStorage.getItem(NAME_KEY) || ''; } catch (e) { return ''; } }
+  function setName(v) { try { localStorage.setItem(NAME_KEY, v); } catch (e) {} }
+  function periodPrefix(p) {
+    var now = new Date();
+    if (p === 'this') return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-';
+    if (p === 'last') {
+      var l = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return l.getFullYear() + '-' + pad(l.getMonth() + 1) + '-';
+    }
+    return null;
+  }
+  function buildPayload() {
+    var prefix = periodPrefix($('#sendPeriod').value);
+    var out = {}, n = 0;
+    for (var k in data) {
+      if (prefix && k.indexOf(prefix) !== 0) continue;
+      out[k] = data[k]; n++;
+    }
+    return {
+      obj: { app: 'hikari', version: 1, name: $('#sendName').value.trim(), exportedAt: new Date().toISOString(), data: out },
+      days: n
+    };
+  }
+  function updateSendInfo() {
+    if (document.activeElement !== $('#sendName')) $('#sendName').value = getName();
+    $('#sendInfo').textContent = '送る記録:' + buildPayload().days + '日分';
+  }
+  function readyPayload() {
+    var p = buildPayload();
+    if (!p.obj.name) { toast('お名前を入力してください'); $('#sendName').focus(); return null; }
+    if (!p.days) { toast('その期間の記録がありません'); return null; }
+    return JSON.stringify(p.obj);
+  }
+  $('#sendName').addEventListener('input', function () { setName(this.value.trim()); });
+  $('#sendPeriod').addEventListener('change', updateSendInfo);
+  $('#sendBtn').addEventListener('click', function () {
+    var text = readyPayload();
+    if (!text) return;
+    var name = $('#sendName').value.trim().replace(/[\\\/:*?"<>|\s]/g, '');
+    var fname = 'hikari-' + (name || 'user') + '-' + keyOf(new Date()) + '.txt';
+    var file = null;
+    try { file = new File([text], fname, { type: 'text/plain' }); } catch (e) {}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: '光の記録(' + $('#sendName').value.trim() + ')' }).catch(function (e) {
+        if (e && e.name !== 'AbortError') toast('送れませんでした。「コピー」をお使いください');
+      });
+    } else {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast('ファイルを保存しました。管理者に送ってください');
+    }
+  });
+  $('#copyBtn').addEventListener('click', function () {
+    var text = readyPayload();
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        function () { toast('コピーしました。管理者に貼り付けて送ってください'); },
+        function () { toast('コピーできませんでした'); });
+    } else {
+      toast('コピーできませんでした');
+    }
   });
 
   // ---------- タブ ----------
