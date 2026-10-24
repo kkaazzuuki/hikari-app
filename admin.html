@@ -57,6 +57,15 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 <body>
 <main>
   <p style="margin:0 0 8px"><a href="index.html" style="color:var(--sub);font-size:13px">← アプリにもどる</a></p>
+  <div id="lock" class="card">
+    <h2>管理者専用ページ</h2>
+    <p class="sub" style="margin-left:0">このページは管理者だけが使えます。パスコードを入力してください。</p>
+    <input type="password" id="pass" autocomplete="current-password" placeholder="パスコード" style="width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);margin-bottom:10px">
+    <div class="row"><button class="btn" id="unlock">開く</button></div>
+    <div class="msg" id="lockMsg"></div>
+  </div>
+
+  <div id="content" hidden>
   <h1>光の記録 管理者ページ</h1>
   <p class="sub">メンバーからLINEで届いた記録を読み込んで集計します。読み込んだ内容はこの画面を閉じると消えます(どこにも保存・送信されません)</p>
 
@@ -89,6 +98,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <button class="btn line" id="csv">CSVで書き出す</button>
       <button class="btn danger" id="clear">すべてクリア</button>
     </div>
+  </div>
   </div>
 </main>
 <script src="admin.js"></script>

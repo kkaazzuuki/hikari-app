@@ -413,9 +413,6 @@
     }
   });
 
-  // 管理者の端末(管理者ページを一度開いた端末)だけにリンクを出す
-  try { if (localStorage.getItem('hikari_admin') === '1') $('#adminLink').style.display = 'block'; } catch (e) {}
-
   renderHome();
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

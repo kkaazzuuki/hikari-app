@@ -260,6 +260,39 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   });
 
-  try { localStorage.setItem('hikari_admin', '1'); } catch (e) {}
-  render();
+  // ---------- 管理者の確認(パスコード) ----------
+  var SALT = 'hikari-ba39f40854a87c8c', ITER = 100000, HASH = '3f63ff1e7cb4f41f1ade1fba01281b105a8c905f607fbaabff692d7ef819ab0a', LSKEY = 'hikari_admin_key';
+  function derive(pass) {
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveBits']).then(function (k) {
+      return crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode(SALT), iterations: ITER }, k, 256);
+    }).then(function (b) {
+      return Array.prototype.map.call(new Uint8Array(b), function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+    });
+  }
+  function unlock() {
+    $('#lock').hidden = true;
+    $('#content').hidden = false;
+    render();
+  }
+  function tryUnlock() {
+    var v = $('#pass').value.trim();
+    if (!v) return;
+    if (!(window.crypto && crypto.subtle)) { $('#lockMsg').innerHTML = '<span class="ng">このブラウザでは使えません。ChromeでHTTPSのURLを開いてください</span>'; return; }
+    $('#lockMsg').textContent = '確認中…';
+    derive(v).then(function (h) {
+      if (h === HASH) {
+        try { localStorage.setItem(LSKEY, h); } catch (e) {}
+        unlock();
+      } else {
+        $('#pass').value = '';
+        $('#lockMsg').innerHTML = '<span class="ng">アクセスできません。管理者以外は使えないページです</span>';
+      }
+    });
+  }
+  $('#unlock').addEventListener('click', tryUnlock);
+  $('#pass').addEventListener('keydown', function (e) { if (e.key === 'Enter') tryUnlock(); });
+  var saved = null;
+  try { saved = localStorage.getItem(LSKEY); } catch (e) {}
+  if (saved && saved === HASH) unlock();
 })();
