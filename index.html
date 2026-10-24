@@ -59,6 +59,10 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .nav button:disabled{opacity:.3}
 .legend{font-size:12px;color:var(--sub);margin:0 2px 8px;display:flex;gap:14px}
 .legend .g{color:var(--gold)}.legend .b{color:var(--blue)}
+.cell.has{background:var(--goldbg)}
+details.card summary{cursor:pointer;font-size:15px;font-weight:700;padding:2px 0}
+details.card[open] summary{margin-bottom:12px}
+details.card h2.s2{font-size:15px;margin:16px 0 8px}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .wd{text-align:center;font-size:12px;color:var(--sub);padding:4px 0}
 .wd.sun{color:#d1544b}.wd.sat{color:var(--blue)}
@@ -154,7 +158,7 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
 
   <div class="card"><div class="grid2" id="monthStats"></div></div>
 
-  <div class="legend"><span class="g">■ 施光(回)</span><span class="b">■ 受光(時:分)</span><span>日をタップで修正</span></div>
+  <div class="legend"><span class="g">■ 施光(回)</span><span class="b">■ 受光(分)</span><span>日をタップで修正</span></div>
   <div class="cal" id="calendar"></div>
 
   <div class="card" style="margin-top:14px">
@@ -162,20 +166,18 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
     <div id="weeks"></div>
   </div>
 
-  <div class="card">
-    <h2>全期間</h2>
+  <details class="card">
+    <summary>その他(全期間の合計・バックアップ)</summary>
+    <h2 class="s2">全期間の合計</h2>
     <div class="grid2" id="allStats"></div>
-  </div>
-
-  <div class="card">
-    <h2>バックアップ</h2>
+    <h2 class="s2">バックアップ</h2>
     <div class="backup">
       <button class="btn sub" id="exportBtn">書き出す</button>
       <button class="btn sub" id="importBtn">読み込む</button>
     </div>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
     <div class="hint">記録はこの端末のブラウザ内に保存されます。機種変更や削除に備えて、ときどき書き出してください</div>
-  </div>
+  </details>
 
   <div id="adminLink" style="text-align:center;margin:6px 0 12px"><a href="admin.html" style="color:var(--sub);font-size:13px">管理者の方はこちら(管理者ページ)</a></div>
 </section>
@@ -187,18 +189,20 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
     <h2>LINEで管理者に報告</h2>
     <label class="fl" for="sendName">お名前(管理者が分かる名前)</label>
     <input id="sendName" class="tx" type="text" maxlength="30" placeholder="例:山田太郎" autocomplete="off">
-    <label class="fl" for="sendPeriod">送る期間</label>
+    <label class="fl" for="sendPeriod">送る分</label>
     <select id="sendPeriod" class="tx">
+      <option value="since">前回の報告のあとの分(おすすめ)</option>
       <option value="this">今月</option>
       <option value="last">先月</option>
       <option value="all">全期間</option>
     </select>
     <div class="preview" id="sendInfo"></div>
-    <div class="backup">
+    <div class="preview" id="lastReport" style="margin-top:0"></div>
+    <div class="backup" style="margin-top:14px">
       <button class="btn" id="sendBtn" style="background:#06c755;color:#fff">LINEで送る</button>
       <button class="btn sub" id="copyBtn">コピー</button>
     </div>
-    <div class="hint">「LINEで送る」を押すと、LINEの送信先の選択画面が開きます。管理者(またはグループ)を選んで送信してください。開かないときは「コピー」して、LINEに貼り付けて送ってください。送られる内容は、お名前と日ごとの施光回数・受光分数だけです</div>
+    <div class="hint">「LINEで送る」を押すと、LINEの送信先の選択画面が開きます。管理者(またはグループ)を選んで送信してください。開かないときは「コピー」して、LINEに貼り付けて送ってください。送られる内容は、お名前と日ごとの施光回数・受光分数だけです。「LINEで送る」「コピー」を押した日時が、最終報告として記録されます</div>
   </div>
 </section>
 

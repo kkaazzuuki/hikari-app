@@ -25,7 +25,7 @@
   }
   function setRec(k, r) {
     if (!r.seko && r.juko == null) delete data[k];
-    else data[k] = { seko: r.seko || 0, juko: r.juko };
+    else data[k] = { seko: r.seko || 0, juko: r.juko, u: new Date().toISOString() };
     persist();
   }
   function clampInt(v, max) {
@@ -213,10 +213,10 @@
       var k = prefix + pad(d);
       var r = data[k];
       var future = k > todayKey;
-      html += '<button class="cell' + (k === todayKey ? ' today' : '') + '" data-k="' + k + '"' + (future ? ' disabled' : '') + '>' +
+      html += '<button class="cell' + (r && (r.seko || r.juko) ? ' has' : '') + (k === todayKey ? ' today' : '') + '" data-k="' + k + '"' + (future ? ' disabled' : '') + '>' +
         '<span class="dn">' + d + '</span>' +
         (r && r.seko ? '<span class="s">' + r.seko + '</span>' : '') +
-        (r && r.juko ? '<span class="j">' + shortMin(r.juko) + '</span>' : '') +
+        (r && r.juko ? '<span class="j">' + r.juko + '分</span>' : '') +
         '</button>';
     }
     $('#calendar').innerHTML = html;
@@ -235,7 +235,7 @@
     }
     $('#weeks').innerHTML = weeks.map(function (x) {
       return '<div class="week"><div>' + (m + 1) + '/' + x.from + ' 〜 ' + (m + 1) + '/' + x.to + '</div>' +
-        '<div class="r"><span class="s">' + x.seko + '回</span>　<span class="j">' + fmtMin(x.juko) + '(' + x.jd + '日)</span></div></div>';
+        '<div class="r"><span class="s">' + x.seko + '回</span>　<span class="j">' + (x.jd ? fmtMin(x.juko) + '(' + x.jd + '日)' : '—') + '</span></div></div>';
     }).join('');
   }
 
@@ -345,8 +345,21 @@
     }
     return null;
   }
+  var LAST_KEY = 'hikari_last_report';
+  function getLast() { try { return localStorage.getItem(LAST_KEY) || ''; } catch (e) { return ''; } }
+  function markReported() { try { localStorage.setItem(LAST_KEY, new Date().toISOString()); } catch (e) {} }
   function sendKeys() {
-    var prefix = periodPrefix($('#sendPeriod').value);
+    var p = $('#sendPeriod').value;
+    var last = getLast();
+    if (p === 'since') {
+      var lastKey = last ? keyOf(new Date(last)) : '';
+      return Object.keys(data).filter(function (k) {
+        if (!last) return true;
+        var r = data[k];
+        return r.u ? r.u > last : k >= lastKey;
+      }).sort();
+    }
+    var prefix = periodPrefix(p);
     return Object.keys(data).filter(function (k) {
       return !prefix || k.indexOf(prefix) === 0;
     }).sort();
@@ -362,7 +375,10 @@
   }
   function updateSendInfo() {
     if (document.activeElement !== $('#sendName')) $('#sendName').value = getName();
-    $('#sendInfo').textContent = '送る記録:' + sendKeys().length + '日分';
+    var n = sendKeys().length;
+    $('#sendInfo').textContent = '送る記録:' + n + '日分' + (n === 0 && $('#sendPeriod').value === 'since' ? '(前回の報告のあとに変更した記録はありません)' : '');
+    var last = getLast();
+    $('#lastReport').textContent = last ? '最終報告:' + (function () { var d = new Date(last); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); })() : 'まだ報告していません';
   }
   function readyText() {
     if (!$('#sendName').value.trim()) { toast('お名前を入力してください'); $('#sendName').focus(); return null; }
@@ -380,6 +396,7 @@
       toast('記録が多すぎます。期間を短くするか「コピー」をお使いください');
       return;
     }
+    markReported();
     location.href = url;
   });
   $('#copyBtn').addEventListener('click', function () {
@@ -387,7 +404,7 @@
     if (!text) return;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(
-        function () { toast('コピーしました。LINEに貼り付けて送ってください'); },
+        function () { markReported(); updateSendInfo(); toast('コピーしました。LINEに貼り付けて送ってください'); },
         function () { toast('コピーできませんでした'); });
     } else {
       toast('コピーできませんでした');
@@ -396,6 +413,7 @@
 
   // ---------- タブ ----------
   var TABS = ['home', 'history', 'report'];
+  var reportInit = false;
   function showTab(name) {
     TABS.forEach(function (t) {
       var cap = t.charAt(0).toUpperCase() + t.slice(1);
@@ -403,7 +421,10 @@
       $('#tab' + cap).classList.toggle('active', t === name);
     });
     if (name === 'history') renderHistory();
-    else if (name === 'report') updateSendInfo();
+    else if (name === 'report') {
+      if (!reportInit) { reportInit = true; $('#sendPeriod').value = getLast() ? 'since' : 'this'; }
+      updateSendInfo();
+    }
     else renderHome();
     window.scrollTo(0, 0);
   }

@@ -9,11 +9,11 @@
 <style>
 :root{
   --bg:#f6f3ec;--card:#ffffff;--ink:#222;--sub:#6b6b6b;--line:#e6e1d6;
-  --gold:#b37a00;--blue:#2c5fa8;--bluebg:#e3edfb;--btn:#1f2a44;--btnink:#fff;--danger:#b3261e;
+  --gold:#b37a00;--goldbg:#fff3d1;--blue:#2c5fa8;--bluebg:#e3edfb;--btn:#1f2a44;--btnink:#fff;--danger:#b3261e;--warn:#b26a00;
 }
 @media (prefers-color-scheme:dark){
   :root{--bg:#12151c;--card:#1c212c;--ink:#eee;--sub:#9aa0ac;--line:#2c3342;
-    --gold:#f0b429;--blue:#7fb0f5;--bluebg:#15263f;--btn:#e8c872;--btnink:#1b1b1b;--danger:#f2b8b5}
+    --gold:#f0b429;--goldbg:#3a2f10;--blue:#7fb0f5;--bluebg:#15263f;--btn:#e8c872;--btnink:#1b1b1b;--danger:#f2b8b5;--warn:#f0b429}
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);
@@ -32,9 +32,6 @@ textarea{min-height:80px;margin:8px 0}
 input[type=file]{font-size:14px;max-width:100%}
 .msg{font-size:13px;margin-top:8px;line-height:1.6}
 .msg .ok{color:var(--blue)}.msg .ng{color:var(--danger)}
-.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.chip{display:inline-flex;align-items:center;gap:6px;background:var(--bluebg);color:var(--blue);border-radius:999px;padding:5px 6px 5px 12px;font-size:13px}
-.chip button{border:none;background:transparent;color:inherit;font-size:16px;cursor:pointer;padding:0 6px}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .stat{background:var(--bg);border-radius:12px;padding:10px 12px}
 .stat .l{font-size:12px;color:var(--sub)}.stat .v{font-size:20px;font-weight:700;margin-top:2px}
@@ -47,44 +44,86 @@ th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right;whit
 th:first-child,td:first-child{text-align:left}
 th{font-size:12px;color:var(--sub);font-weight:600}
 tr.m{cursor:pointer}
+tr.m.off td:first-child{color:var(--sub)}
 td.s{color:var(--gold);font-weight:700}td.j{color:var(--blue)}
-tr.d td{background:var(--bg);text-align:left;white-space:normal;font-size:13px;line-height:1.8}
+.warn{color:var(--warn);font-weight:700}.bad{color:var(--danger);font-weight:700}
+tr.d td{background:var(--bg);text-align:left;white-space:normal;font-size:13px;line-height:1.9}
 tfoot td{font-weight:700;border-top:2px solid var(--line)}
-.empty{color:var(--sub);text-align:center;padding:24px 0;font-size:14px}
 .note{font-size:12px;color:var(--sub);line-height:1.7;margin-top:10px}
 dialog{border:none;border-radius:16px;padding:20px;width:min(92vw,420px);background:var(--card);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.45)}
 dialog h3{margin:0 0 6px}
 dialog label{display:block;font-size:13px;color:var(--sub);margin:12px 0 4px}
-dialog input{width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:inherit}
+dialog input[type=text],dialog input[type=date],dialog input[type=number]{width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:inherit}
+dialog label.chk{display:flex;align-items:center;gap:8px;color:var(--ink);font-size:14px}
 .ed{border:none;background:transparent;color:var(--blue);font-size:13px;cursor:pointer;text-decoration:underline;padding:0 6px}
+.ed.dn{color:var(--danger)}
+details.fold{margin-top:12px}
+details.fold summary{cursor:pointer;font-size:14px;color:var(--blue)}
+.un{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.un:last-child{border-bottom:none}
+.un .r{text-align:right}
+.okline{color:var(--blue);font-size:14px;padding:6px 0}
+.bar{display:grid;grid-template-columns:5.5em 1fr 5.5em;gap:8px;align-items:center;padding:5px 0;font-size:13px}
+.bar .bl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .bt{background:var(--bg);border-radius:6px;height:16px;overflow:hidden}
+.bar .bf{height:100%;border-radius:6px}
+.bar .bf.g{background:var(--gold)}.bar .bf.b{background:var(--blue)}
+.bar .bv{text-align:right;font-weight:700;white-space:nowrap}
 </style>
 </head>
 <body>
 <main>
-  <p style="margin:0 0 8px"><a href="index.html" style="color:var(--sub);font-size:13px">← アプリにもどる</a></p>
   <div id="lock" class="card">
     <h2>管理者専用ページ</h2>
     <p class="sub" style="margin-left:0">このページは管理者だけが使えます。パスコードを入力してください。</p>
     <input type="password" id="pass" autocomplete="current-password" placeholder="パスコード" style="width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);margin-bottom:10px">
     <div class="row"><button class="btn" id="unlock">開く</button></div>
     <div class="msg" id="lockMsg"></div>
+    <p style="margin:14px 0 0"><a href="index.html" style="color:var(--sub);font-size:13px">← アプリにもどる</a></p>
   </div>
 
   <div id="content" hidden>
+  <p style="margin:0 0 8px"><a href="index.html" style="color:var(--sub);font-size:13px">← アプリにもどる</a></p>
   <h1>光の記録 管理者ページ</h1>
   <p class="sub">メンバーからLINEで届いた記録を読み込んで集計します。読み込んだ記録は、この端末に保存されます(過去の分も残り、同じ人から新しく届くと更新されます)</p>
 
   <div class="card">
     <h2>記録を読み込む</h2>
-    <input type="file" id="files" multiple accept=".txt,.json,text/plain,application/json">
-    <div class="note">LINEの届いたメッセージをコピーして、下の欄に貼り付けるだけで読み込めます。複数人分をまとめて貼り付けてもOKです。LINEのグループの「トーク履歴を送信」で書き出したファイルも、そのまま選べます。</div>
+    <div class="note" style="margin-top:0">LINEで届いたメッセージをコピーして、下の欄に貼り付けるだけで読み込めます。複数人分をまとめて貼り付けてもOKです。</div>
     <textarea id="paste" placeholder="LINEで届いた記録をここに貼り付けて「追加」を押します"></textarea>
     <div class="row"><button class="btn" id="addPaste">追加</button></div>
     <div class="msg" id="msg"></div>
-    <div class="row" style="margin-top:10px"><button class="btn line" id="addMember">メンバーを手入力で追加</button></div>
-    <div class="note" style="margin-top:12px">保存済みのメンバー(×で、その人の記録をすべて削除)</div>
-    <div class="chips" id="chips"></div>
+    <details class="fold">
+      <summary>ファイルから読み込む(LINEのトーク履歴など)</summary>
+      <div class="note">LINEのグループの「トーク履歴を送信」で書き出したファイルも、そのまま選べます。</div>
+      <input type="file" id="files" multiple accept=".txt,.json,text/plain,application/json" style="margin-top:8px">
+    </details>
+    <details class="fold">
+      <summary>名簿を登録する(メンバーの名前)</summary>
+      <div class="note">メンバーの名前を1行に1人ずつ入力して登録すると、まだ一度も届いていない人も「報告がない人」に表示されます。</div>
+      <textarea id="roster" placeholder="山田太郎&#10;佐藤花子"></textarea>
+      <div class="row">
+        <button class="btn line" id="rosterAdd">名簿に登録</button>
+        <button class="btn line" id="addMember">1人ずつ手入力で追加</button>
+      </div>
+    </details>
+  </div>
+
+  <div class="card" id="unrep" hidden>
+    <h2>報告がない人</h2>
+    <div class="ctl" style="grid-template-columns:1fr">
+      <div><label for="unDays">最後の報告から、何日たった人を表示するか</label>
+        <select id="unDays">
+          <option value="3">3日以上</option>
+          <option value="7" selected>7日以上</option>
+          <option value="14">14日以上</option>
+          <option value="30">30日以上</option>
+        </select>
+      </div>
+    </div>
+    <div id="unList"></div>
+    <div class="note">「最後の報告」は、その人からのLINEの記録が届いた日(または、あなたが手入力した日)です。お休み中の人は、名前の内訳から「休止中にする」と、この一覧に出なくなります。</div>
   </div>
 
   <div class="card" id="result" hidden>
@@ -96,15 +135,35 @@ dialog input{width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--
           <option value="name">名前順</option>
           <option value="seko">施光が多い順</option>
           <option value="juko">受光時間が長い順</option>
+          <option value="rep">最終報告が古い順</option>
         </select>
       </div>
     </div>
     <div class="grid" id="summary"></div>
     <div class="tw" style="margin-top:12px"><table id="table"></table></div>
-    <div class="note">名前の行をタップすると、日ごとの内訳が開きます。内訳から、記録の修正・追加ができます。</div>
+    <div class="note">名前の行をタップすると、日ごとの内訳が開きます。内訳から、記録の修正・追加・削除ができます。</div>
     <div class="row" style="margin-top:12px">
       <button class="btn line" id="csv">CSVで書き出す</button>
     </div>
+  </div>
+
+  <div class="card" id="chartCard" hidden>
+    <h2>グラフ</h2>
+    <div class="ctl">
+      <div><label for="chartMode">見かた</label>
+        <select id="chartMode">
+          <option value="member">メンバー別(上の集計の期間)</option>
+          <option value="month">月別(全員の合計)</option>
+        </select>
+      </div>
+      <div><label for="chartMetric">項目</label>
+        <select id="chartMetric">
+          <option value="seko">施光(回数)</option>
+          <option value="juko">受光(時間)</option>
+        </select>
+      </div>
+    </div>
+    <div id="chart"></div>
   </div>
 
   <div class="card">
@@ -119,6 +178,7 @@ dialog input{width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--
   </div>
   </div>
 </main>
+
 <dialog id="eDlg">
   <h3 id="eTitle">記録の入力</h3>
   <label for="eName">名前</label>
@@ -130,6 +190,7 @@ dialog input{width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--
   <input id="eSeko" type="number" inputmode="numeric" min="0" max="9999">
   <label for="eJuko">受光(その日の合計・分)</label>
   <input id="eJuko" type="number" inputmode="numeric" min="0" max="1440" placeholder="未記録">
+  <label class="chk"><input type="checkbox" id="eRep" checked style="width:auto"> この人から報告を受け取った日として記録する</label>
   <div class="note" id="ePrev"></div>
   <div class="row" style="margin-top:16px">
     <button class="btn" id="eSave">保存</button>
@@ -137,7 +198,6 @@ dialog input{width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--
     <button class="btn line" id="eClose">閉じる</button>
   </div>
 </dialog>
-
 <script src="admin.js"></script>
 </body>
 </html>
