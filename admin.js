@@ -260,5 +260,6 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   });
 
+  try { localStorage.setItem('hikari_admin', '1'); } catch (e) {}
   render();
 })();
