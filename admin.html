@@ -70,6 +70,12 @@ details.fold summary{cursor:pointer;font-size:14px;color:var(--blue)}
 .bar .bf{height:100%;border-radius:6px}
 .bar .bf.g{background:var(--gold)}.bar .bf.b{background:var(--blue)}
 .bar .bv{text-align:right;font-weight:700;white-space:nowrap}
+.gtab{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:14px;cursor:pointer;font-family:inherit}
+.gtab.on{background:var(--btn);color:var(--btnink);border-color:var(--btn);font-weight:700}
+.gtab small{opacity:.7;margin-left:4px}
+.gname{font-size:13px;color:var(--sub);margin:-4px 0 8px}
+.gname b{color:var(--ink)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -88,8 +94,22 @@ details.fold summary{cursor:pointer;font-size:14px;color:var(--blue)}
   <h1>光の記録 管理者ページ</h1>
   <p class="sub">メンバーからLINEで届いた記録を読み込んで集計します。読み込んだ記録は、この端末に保存されます(過去の分も残り、同じ人から新しく届くと更新されます)</p>
 
+  <div class="card" id="grpCard">
+    <h2>グループ</h2>
+    <div class="chips" id="grpChips"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn line" id="grpAdd">＋グループを追加</button>
+      <button class="btn line" id="grpRename">名前を変更</button>
+      <button class="btn line" id="grpDel" style="color:var(--danger)">削除</button>
+    </div>
+    <div class="note">グループごとに、名簿・集計表・グラフが別になります。選んだグループが、下の「読み込み先」になります。</div>
+  </div>
+
   <div class="card">
     <h2>記録を読み込む</h2>
+    <div class="ctl" style="grid-template-columns:1fr;margin-bottom:8px">
+      <div><label for="grpSel">読み込み先のグループ</label><select id="grpSel"></select></div>
+    </div>
     <div class="note" style="margin-top:0">LINEで届いたメッセージをコピーして、下の欄に貼り付けるだけで読み込めます。複数人分をまとめて貼り付けてもOKです。</div>
     <textarea id="paste" placeholder="LINEで届いた記録をここに貼り付けて「追加」を押します"></textarea>
     <div class="row"><button class="btn" id="addPaste">追加</button></div>
@@ -112,6 +132,7 @@ details.fold summary{cursor:pointer;font-size:14px;color:var(--blue)}
 
   <div class="card" id="unrep" hidden>
     <h2>報告がない人</h2>
+    <div class="gname">グループ:<b id="gnUn"></b></div>
     <div class="ctl" style="grid-template-columns:1fr">
       <div><label for="unDays">最後の報告から、何日たった人を表示するか</label>
         <select id="unDays">
@@ -128,6 +149,7 @@ details.fold summary{cursor:pointer;font-size:14px;color:var(--blue)}
 
   <div class="card" id="result" hidden>
     <h2>集計</h2>
+    <div class="gname">グループ:<b id="gnTable"></b></div>
     <div class="ctl">
       <div><label for="period">期間</label><select id="period"></select></div>
       <div><label for="sort">並べ替え</label>
@@ -149,6 +171,7 @@ details.fold summary{cursor:pointer;font-size:14px;color:var(--blue)}
 
   <div class="card" id="chartCard" hidden>
     <h2>グラフ</h2>
+    <div class="gname">グループ:<b id="gnChart"></b></div>
     <div class="ctl">
       <div><label for="chartMode">見かた</label>
         <select id="chartMode">
@@ -174,7 +197,7 @@ details.fold summary{cursor:pointer;font-size:14px;color:var(--blue)}
       <input type="file" id="bkFile" accept=".json,application/json" hidden>
     </div>
     <div class="note">保存先はこの端末のブラウザの中です。端末の変更や、ブラウザのデータ削除に備えて、ときどき書き出してください。</div>
-    <div class="row" style="margin-top:14px"><button class="btn danger" id="clear">保存済みの記録をすべて削除</button></div>
+    <div class="row" style="margin-top:14px"><button class="btn danger" id="clear">このグループの記録をすべて削除</button></div>
   </div>
   </div>
 </main>

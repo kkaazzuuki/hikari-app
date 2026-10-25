@@ -3,7 +3,10 @@
 
   var WD = ['日', '月', '火', '水', '木', '金', '土'];
   // members[名前] = { days:{日付:{seko,juko}}, stamps:{日付:更新日時}, reported:最終報告日時, inactive:休止中 }
-  var members = {};
+  var members = {};   // 表示中のグループのメンバー(groups[cur].members と同じもの)
+  var groups = {};    // id -> { name, members }
+  var order = [];     // グループの並び順
+  var cur = '';       // 表示中・読み込み先のグループid
   var open = {};
   var STORE = 'hikari_admin_data_v1';
 
@@ -56,16 +59,90 @@
   }
 
   // ---------- 保存(この端末) ----------
+  function newGid() { return 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
   function loadStore() {
-    try {
-      var o = JSON.parse(localStorage.getItem(STORE));
-      if (o && o.members && typeof o.members === 'object') members = o.members;
-    } catch (e) {}
+    var o = null;
+    try { o = JSON.parse(localStorage.getItem(STORE)); } catch (e) {}
+    groups = {}; order = []; cur = '';
+    if (o && o.groups && typeof o.groups === 'object') {
+      groups = o.groups;
+      order = (o.order || []).filter(function (g) { return groups[g]; });
+      Object.keys(groups).forEach(function (g) { if (order.indexOf(g) < 0) order.push(g); });
+      cur = groups[o.current] ? o.current : order[0];
+    } else if (o && o.members && typeof o.members === 'object') {
+      // 以前の形式(グループなし)を、最初のグループとして引き継ぐ
+      groups.g1 = { name: 'グループ1', members: o.members };
+      order = ['g1']; cur = 'g1';
+    }
+    if (!order.length) { groups.g1 = { name: 'グループ1', members: {} }; order = ['g1']; cur = 'g1'; }
+    order.forEach(function (g) { if (!groups[g].members) groups[g].members = {}; });
+    members = groups[cur].members;
   }
   function saveStore() {
-    try { localStorage.setItem(STORE, JSON.stringify({ version: 2, members: members })); }
+    try { localStorage.setItem(STORE, JSON.stringify({ version: 3, groups: groups, order: order, current: cur })); }
     catch (e) { $('#msg').innerHTML = '<div class="ng">× この端末に保存できませんでした</div>'; }
   }
+  function gname() { return groups[cur] ? groups[cur].name : ''; }
+  function selectGroup(id) {
+    if (!groups[id]) return;
+    cur = id;
+    members = groups[id].members;
+    open = {};
+    $('#msg').innerHTML = '';
+    saveStore();
+    render();
+  }
+  function renderGroups() {
+    $('#grpChips').innerHTML = order.map(function (g) {
+      return '<button class="gtab' + (g === cur ? ' on' : '') + '" data-g="' + g + '">' + esc(groups[g].name) +
+        '<small>' + Object.keys(groups[g].members).length + '人</small></button>';
+    }).join('');
+    $('#grpSel').innerHTML = order.map(function (g) {
+      return '<option value="' + g + '"' + (g === cur ? ' selected' : '') + '>' + esc(groups[g].name) + '</option>';
+    }).join('');
+    ['#gnTable', '#gnChart', '#gnUn'].forEach(function (id) { $(id).textContent = gname(); });
+    $('#grpDel').disabled = order.length <= 1;
+    $('#grpDel').style.opacity = order.length <= 1 ? '.4' : '1';
+  }
+  $('#grpChips').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-g]');
+    if (b) selectGroup(b.getAttribute('data-g'));
+  });
+  $('#grpSel').addEventListener('change', function () { selectGroup(this.value); });
+  function nameTaken(n, exceptId) {
+    return order.some(function (g) { return g !== exceptId && groups[g].name === n; });
+  }
+  $('#grpAdd').addEventListener('click', function () {
+    var n = prompt('新しいグループの名前を入力してください');
+    if (n === null) return;
+    n = n.trim().slice(0, 30);
+    if (!n) return;
+    if (nameTaken(n, '')) { alert('同じ名前のグループがあります'); return; }
+    var id = newGid();
+    groups[id] = { name: n, members: {} };
+    order.push(id);
+    selectGroup(id);
+  });
+  $('#grpRename').addEventListener('click', function () {
+    var n = prompt('グループの新しい名前を入力してください', gname());
+    if (n === null) return;
+    n = n.trim().slice(0, 30);
+    if (!n) return;
+    if (nameTaken(n, cur)) { alert('同じ名前のグループがあります'); return; }
+    groups[cur].name = n;
+    saveStore();
+    render();
+  });
+  $('#grpDel').addEventListener('click', function () {
+    if (order.length <= 1) { alert('グループは最低1つ必要です'); return; }
+    var cnt = Object.keys(members).length;
+    if (!confirm('グループ「' + gname() + '」(' + cnt + '人分の記録)を、すべて削除します。元に戻せません。よろしいですか?')) return;
+    var id = cur;
+    var idx = order.indexOf(id);
+    order.splice(idx, 1);
+    delete groups[id];
+    selectGroup(order[Math.max(0, idx - 1)]);
+  });
   function ensure(name) {
     var m = members[name] || (members[name] = { days: {}, stamps: {}, reported: '', inactive: false });
     if (!m.days) m.days = {};
@@ -158,11 +235,12 @@
     $('#msg').innerHTML = list.map(function (x) {
       if (!x.ok) return '<div class="ng">× ' + esc(x.label) + ':' + esc(x.msg) + '</div>';
       var c = x.c, parts = [];
-      if (!c.added && !c.updated) return '<div class="ok">✓ ' + esc(x.name) + 'さん:すでに登録済みです(変更なし ' + c.same + '日分)</div>';
+      var gp = '[' + esc(gname()) + '] ';
+      if (!c.added && !c.updated) return '<div class="ok">✓ ' + gp + esc(x.name) + 'さん:すでに登録済みです(変更なし ' + c.same + '日分)</div>';
       if (c.added) parts.push('新規 ' + c.added + '日');
       if (c.updated) parts.push('更新 ' + c.updated + '日');
       if (c.same) parts.push('変更なし ' + c.same + '日');
-      return '<div class="ok">✓ ' + esc(x.name) + 'さん:' + parts.join('・') + '</div>';
+      return '<div class="ok">✓ ' + gp + esc(x.name) + 'さん:' + parts.join('・') + '</div>';
     }).join('');
   }
 
@@ -295,6 +373,7 @@
   }
 
   function render() {
+    renderGroups();
     var names = Object.keys(members);
     $('#result').hidden = !names.length;
     $('#chartCard').hidden = !names.length;
@@ -377,8 +456,9 @@
   });
 
   $('#clear').addEventListener('click', function () {
-    if (!confirm('保存済みの全メンバーの記録を、すべて削除します。元に戻せません。よろしいですか?')) return;
-    members = {};
+    if (!confirm('グループ「' + gname() + '」の記録を、すべて削除します(他のグループは残ります)。元に戻せません。よろしいですか?')) return;
+    groups[cur].members = {};
+    members = groups[cur].members;
     open = {};
     $('#msg').innerHTML = '';
     saveStore();
@@ -389,14 +469,14 @@
     var rows = compute();
     function q(s) { return '"' + String(s).replace(/"/g, '""') + '"'; }
     var p = $('#period').value;
-    var lines = ['名前,施光合計(回),受光合計(分),受光日数,最終記録日,最終報告日時,休止中'];
+    var lines = ['グループ,名前,施光合計(回),受光合計(分),受光日数,最終記録日,最終報告日時,休止中'];
     rows.forEach(function (x) {
-      lines.push([q(x.name), x.seko, x.juko, x.jd, x.last, q(x.reported), x.inactive ? '休止' : ''].join(','));
+      lines.push([q(gname()), q(x.name), x.seko, x.juko, x.jd, x.last, q(x.reported), x.inactive ? '休止' : ''].join(','));
     });
     var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'hikari-' + (p === 'all' ? 'all' : p) + '.csv';
+    a.download = 'hikari-' + gname().replace(/[\\\/:*?"<>|\s]/g, '') + '-' + (p === 'all' ? 'all' : p) + '.csv';
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -457,7 +537,7 @@
 
   // ---------- バックアップ ----------
   $('#bkOut').addEventListener('click', function () {
-    var blob = new Blob([JSON.stringify({ app: 'hikari-admin', version: 2, members: members }, null, 2)], { type: 'application/json' });
+    var blob = new Blob([JSON.stringify({ app: 'hikari-admin', version: 3, groups: groups, order: order }, null, 2)], { type: 'application/json' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'hikari-admin-' + todayStr() + '.json';
@@ -467,6 +547,35 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   });
   $('#bkIn').addEventListener('click', function () { $('#bkFile').click(); });
+
+  // バックアップ内のメンバーを、指定のグループへマージ(同じ日は新しいほうを残す)
+  function mergeInto(target, src) {
+    var n = 0;
+    Object.keys(src || {}).forEach(function (nm) {
+      var sm = src[nm] || {};
+      var days = sm.days || {}, st = sm.stamps || {};
+      var name = String(nm).trim().slice(0, 40);
+      if (!name) return;
+      var m = target[name] || (target[name] = { days: {}, stamps: {}, reported: '', inactive: false });
+      if (!m.days) m.days = {};
+      if (!m.stamps) m.stamps = {};
+      if (sm.reported && String(sm.reported) > (m.reported || '')) m.reported = String(sm.reported);
+      if (sm.inactive) m.inactive = true;
+      Object.keys(days).forEach(function (k) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
+        var r = days[k] || {};
+        var seko = clamp(r.seko, 9999);
+        var juko = (r.juko == null) ? null : (clamp(r.juko, 1440) || null);
+        var stamp = String(st[k] || '');
+        if (!seko && juko == null) return;
+        if (m.stamps[k] && m.stamps[k] > stamp) return;
+        m.days[k] = { seko: seko, juko: juko };
+        m.stamps[k] = stamp;
+        n++;
+      });
+    });
+    return n;
+  }
   $('#bkFile').addEventListener('change', function () {
     var input = this, f = input.files[0];
     if (!f) return;
@@ -474,32 +583,27 @@
     rd.onload = function () {
       try {
         var o = JSON.parse(String(rd.result));
-        if (!o || o.app !== 'hikari-admin' || !o.members) throw new Error('bad');
-        var names = Object.keys(o.members), n = 0;
-        if (!confirm(names.length + '人分のバックアップを読み込みます。同じ日の記録は、新しいほうが残ります。よろしいですか?')) return;
-        names.forEach(function (nm) {
-          var src = o.members[nm] || {};
-          var days = src.days || {}, st = src.stamps || {};
-          var name = String(nm).trim().slice(0, 40);
-          if (!name) return;
-          var m = ensure(name);
-          if (src.reported && String(src.reported) > (m.reported || '')) m.reported = String(src.reported);
-          if (src.inactive) m.inactive = true;
-          Object.keys(days).forEach(function (k) {
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
-            var r = days[k] || {};
-            var seko = clamp(r.seko, 9999);
-            var juko = (r.juko == null) ? null : (clamp(r.juko, 1440) || null);
-            var stamp = String(st[k] || '');
-            if (!seko && juko == null) return;
-            if (m.stamps[k] && m.stamps[k] > stamp) return;
-            m.days[k] = { seko: seko, juko: juko };
-            m.stamps[k] = stamp;
-            n++;
+        if (!o || o.app !== 'hikari-admin') throw new Error('bad');
+        var n = 0, gcount = 0;
+        if (o.groups && typeof o.groups === 'object') {
+          var ids = (o.order || Object.keys(o.groups)).filter(function (g) { return o.groups[g]; });
+          if (!confirm(ids.length + 'グループ分のバックアップを読み込みます。同じ名前のグループには、同じ日の記録は新しいほうが残るように合わせます。よろしいですか?')) { input.value = ''; return; }
+          ids.forEach(function (gid) {
+            var src = o.groups[gid];
+            var gn = String(src.name || 'グループ').trim().slice(0, 30) || 'グループ';
+            var hit = order.filter(function (g) { return groups[g].name === gn; })[0];
+            if (!hit) { hit = newGid(); groups[hit] = { name: gn, members: {} }; order.push(hit); }
+            n += mergeInto(groups[hit].members, src.members);
+            gcount++;
           });
-        });
+        } else if (o.members) {
+          if (!confirm('バックアップ(グループなし)を、グループ「' + gname() + '」に読み込みます。よろしいですか?')) { input.value = ''; return; }
+          n += mergeInto(members, o.members);
+          gcount = 1;
+        } else { throw new Error('bad'); }
+        members = groups[cur].members;
         saveStore();
-        $('#msg').innerHTML = '<div class="ok">✓ バックアップを読み込みました(' + n + '日分)</div>';
+        $('#msg').innerHTML = '<div class="ok">✓ バックアップを読み込みました(' + gcount + 'グループ・' + n + '日分)</div>';
         render();
       } catch (e) {
         $('#msg').innerHTML = '<div class="ng">× バックアップファイルを読み込めませんでした</div>';
