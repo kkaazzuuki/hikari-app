@@ -63,6 +63,10 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .cell .mk{color:var(--san);font-weight:700;margin-left:2px;font-size:12px}
 .legend .p{color:var(--san)}
 .week .p{color:var(--san);font-size:12px}
+.commit-info{font-size:14px;color:var(--sub);margin-bottom:10px;text-align:center;line-height:1.6}
+.commit-info.dirty{color:var(--gold);font-weight:700}
+.btn.commit{width:100%;padding:16px 12px;font-size:18px}
+.btn.commit.dirty{background:var(--gold);color:#fff}
 .seg{display:flex;gap:10px}
 .seg button{flex:1;padding:16px 8px;font-size:17px;font-weight:700;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--sub);cursor:pointer;font-family:inherit}
 .seg button.on-yes{background:var(--san);border-color:var(--san);color:#fff}
@@ -127,7 +131,7 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
       <input id="sekoInput" type="number" inputmode="numeric" min="0" max="9999" value="0" aria-label="施光回数">
       <button class="round plus" id="sekoPlus" aria-label="1回増やす">＋</button>
     </div>
-    <div class="hint">＋で1回追加／数字をタップして直接入力もできます。日付の◀▶や日付欄で、入力する日を変えられます</div>
+    <div class="hint">＋で1回追加／数字をタップして直接入力もできます。入力したら、下の「追加・更新」を押してください。日付の◀▶や日付欄で、入力する日を変えられます</div>
   </div>
 
   <div class="card">
@@ -136,7 +140,6 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
     <div class="row">
       <input id="jukoInput" type="number" inputmode="numeric" min="1" max="1440" placeholder="追加する分数" aria-label="追加する受光時間(分)">
       <span>分</span>
-      <button class="btn" id="jukoSave">追加する</button>
     </div>
     <div class="chips">
       <button class="chip" data-add="10">+10</button>
@@ -145,7 +148,7 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
       <button class="chip" data-add="120">+120</button>
     </div>
     <div class="preview" id="jukoPreview"></div>
-    <div class="hint" style="text-align:left;margin-top:0">何回かに分けて受光したときは、そのつど「追加する」を押すと、1日の合計になります</div>
+    <div class="hint" style="text-align:left;margin-top:0">入力した分数は、下の「追加・更新」を押すと、その日の合計に足されます。何回かに分けて受光したときも、そのつど足されます</div>
     <div class="row" style="gap:16px">
       <button class="link" id="jukoEdit">合計を修正する</button>
       <button class="link" id="jukoClear">この日の受光を消す</button>
@@ -158,6 +161,11 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
       <button id="sanNo" aria-label="参拝していない">× していない</button>
       <button id="sanYes" aria-label="参拝した">○ 参拝した</button>
     </div>
+  </div>
+
+  <div class="card" id="commitCard">
+    <div id="commitInfo" class="commit-info"></div>
+    <button class="btn commit" id="commitBtn">この日の記録を追加・更新する</button>
   </div>
 
   <div class="card">

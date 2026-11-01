@@ -86,6 +86,7 @@
     return keyOf(new Date(+p[0], +p[1] - 1, +p[2] + delta));
   }
   function setSel(k) {
+    if (!confirmDiscard()) { renderHome(); return; }
     selKey = (!k || k >= todayKey) ? null : k;
     $('#jukoInput').value = '';
     renderHome();
@@ -105,32 +106,85 @@
     $('#sekoTitle').textContent = selKey ? 'この日の回数' : '今日の回数(何回でもOK)';
 
     var r = rec(key);
-    if (document.activeElement !== $('#sekoInput')) $('#sekoInput').value = r.seko;
+    syncDraft(key, r);
+    if (document.activeElement !== $('#sekoInput')) $('#sekoInput').value = draft.seko;
     $('#jukoState').innerHTML = r.juko == null
       ? '<span class="pill off">' + (selKey ? 'この日' : '本日') + 'は未記録</span>'
       : '<span class="pill on">' + (selKey ? 'この日' : '本日') + 'の合計:' + fmtMin(r.juko) + '</span>';
     updateJukoPreview();
     $('#sanTitle').textContent = selKey ? 'この日に参拝したか' : '今日参拝したか';
-    $('#sanYes').className = r.san ? 'on-yes' : '';
-    $('#sanNo').className = r.san ? '' : 'on-no';
-    $('#sanYes').setAttribute('aria-pressed', r.san ? 'true' : 'false');
-    $('#sanNo').setAttribute('aria-pressed', r.san ? 'false' : 'true');
+    $('#sanYes').className = draft.san ? 'on-yes' : '';
+    $('#sanNo').className = draft.san ? '' : 'on-no';
+    $('#sanYes').setAttribute('aria-pressed', draft.san ? 'true' : 'false');
+    $('#sanNo').setAttribute('aria-pressed', draft.san ? 'false' : 'true');
+    updateCommit();
 
     var prefix = key.slice(0, 8);
     $('#homeStatsTitle').textContent = (+p[1]) + '月のまとめ';
     $('#homeStats').innerHTML = statsBlock(sumRange(function (k) { return k.indexOf(prefix) === 0; }));
   }
+  // 入力中の内容(まだ保存していない)。「追加・更新」を押すと、まとめて保存する
+  var draft = { key: '', seko: 0, san: false };
+  function syncDraft(key, r) {
+    if (draft.key !== key) {
+      draft = { key: key, seko: r.seko, san: r.san };
+      $('#jukoInput').value = '';
+    }
+  }
+  function addMinutes() { return clampInt($('#jukoInput').value, MAX_JUKO); }
+  function isDirty() {
+    var r = rec(curKey());
+    return draft.key === curKey() && (draft.seko !== r.seko || draft.san !== r.san || addMinutes() > 0);
+  }
   function updateJukoPreview() {
-    var v = $('#jukoInput').value;
-    $('#jukoPreview').textContent = v === '' ? '' : '＝ ' + fmtMin(clampInt(v, MAX_JUKO)) + ' を追加';
+    var add = addMinutes();
+    var r = rec(curKey());
+    $('#jukoPreview').textContent = add ? '＝ ' + fmtMin(add) + ' を追加(追加後の合計 ' + fmtMin((r.juko || 0) + add) + ')' : '';
+    updateCommit();
+  }
+  function updateCommit() {
+    var d = isDirty();
+    var r = rec(curKey());
+    var parts = [];
+    if (draft.seko !== r.seko) parts.push('施光 ' + draft.seko + '回');
+    var add = addMinutes();
+    if (add) parts.push('受光 +' + fmtMin(add));
+    if (draft.san !== r.san) parts.push('参拝 ' + (draft.san ? '○' : '×'));
+    $('#commitInfo').textContent = d ? '未保存:' + parts.join(' / ') : '保存済み(変更はありません)';
+    $('#commitInfo').className = 'commit-info' + (d ? ' dirty' : '');
+    $('#commitBtn').className = 'btn commit' + (d ? ' dirty' : '');
   }
   function changeSeko(delta) {
+    draft.seko = Math.max(0, Math.min(MAX_SEKO, draft.seko + delta));
+    $('#sekoInput').value = draft.seko;
+    updateCommit();
+  }
+  function confirmDiscard() {
+    return !isDirty() || confirm('保存していない入力があります。破棄して、日付を変えますか?');
+  }
+
+  $('#commitBtn').addEventListener('click', function () {
     var key = curKey();
     var r = rec(key);
-    r.seko = Math.max(0, Math.min(MAX_SEKO, r.seko + delta));
+    var add = addMinutes();
+    var total = (r.juko || 0) + add;
+    if (total > MAX_JUKO) { toast('1日の受光の合計は24時間(1440分)までです'); return; }
+    if (!isDirty()) { toast('変更はありません'); return; }
+    var msg = [];
+    if (draft.seko !== r.seko) msg.push('施光 ' + draft.seko + '回');
+    if (add) msg.push('受光 +' + fmtMin(add) + '(合計 ' + fmtMin(total) + ')');
+    if (draft.san !== r.san) msg.push('参拝 ' + (draft.san ? '○' : '×'));
+    r.seko = draft.seko;
+    r.san = draft.san;
+    if (add) r.juko = total;
     setRec(key, r);
+    $('#jukoInput').value = '';
+    $('#jukoInput').blur();
+    draft = { key: '', seko: 0, san: false };
     renderHome();
-  }
+    toast('記録しました:' + msg.join(' / '));
+    if (navigator.vibrate) navigator.vibrate(20);
+  });
 
   $('#dPrev').addEventListener('click', function () { setSel(shiftKey(curKey(), -1)); });
   $('#dNext').addEventListener('click', function () { setSel(shiftKey(curKey(), 1)); });
@@ -146,22 +200,19 @@
   });
   $('#sekoMinus').addEventListener('click', function () { changeSeko(-1); });
   function setSan(v) {
-    var key = curKey();
-    var r = rec(key);
-    if (r.san === v) return;
-    r.san = v;
-    setRec(key, r);
+    draft.san = v;
     renderHome();
-    toast(v ? '道場参拝 ○ を記録しました' : '道場参拝 × にしました');
   }
   $('#sanYes').addEventListener('click', function () { setSan(true); if (navigator.vibrate) navigator.vibrate(15); });
   $('#sanNo').addEventListener('click', function () { setSan(false); });
+  $('#sekoInput').addEventListener('input', function () {
+    draft.seko = clampInt(this.value, MAX_SEKO);
+    updateCommit();
+  });
   $('#sekoInput').addEventListener('change', function () {
-    var key = curKey();
-    var r = rec(key);
-    r.seko = clampInt(this.value, MAX_SEKO);
-    setRec(key, r);
-    renderHome();
+    draft.seko = clampInt(this.value, MAX_SEKO);
+    this.value = draft.seko;
+    updateCommit();
   });
   $('#sekoInput').addEventListener('focus', function () { this.select(); });
 
@@ -173,21 +224,7 @@
       updateJukoPreview();
     });
   });
-  // 受光は「1日の合計分数」。追加するたびに、その日の合計へ足していく
-  $('#jukoSave').addEventListener('click', function () {
-    var add = clampInt($('#jukoInput').value, MAX_JUKO);
-    if (add < 1) { toast('追加する分数を入力してください'); return; }
-    var key = curKey();
-    var r = rec(key);
-    var total = (r.juko || 0) + add;
-    if (total > MAX_JUKO) { toast('1日の合計は24時間(1440分)までです'); return; }
-    r.juko = total;
-    setRec(key, r);
-    $('#jukoInput').value = '';
-    $('#jukoInput').blur();
-    renderHome();
-    toast(fmtMin(add) + ' を追加しました(合計 ' + fmtMin(total) + ')');
-  });
+  // 受光は「1日の合計分数」。入力した分数は、「追加・更新」を押したときに、その日の合計へ足される
   $('#jukoEdit').addEventListener('click', function () {
     var key = curKey();
     var r = rec(key);
@@ -299,6 +336,7 @@
     var juko = null;
     if (jv !== '') { juko = clampInt(jv, MAX_JUKO); if (juko < 1) juko = null; }
     setRec(editKey, { seko: seko, juko: juko, san: $('#dlgSan').checked });
+    draft.key = '';
     $('#dlg').close();
     renderHistory(); renderHome();
     toast('保存しました');
@@ -306,6 +344,7 @@
   $('#dlgDelete').addEventListener('click', function () {
     if (!confirm('この日の記録をすべて消しますか?')) return;
     setRec(editKey, { seko: 0, juko: null, san: false });
+    draft.key = '';
     $('#dlg').close();
     renderHistory(); renderHome();
   });
@@ -345,6 +384,7 @@
         if (!n) { toast('読み込める記録がありませんでした'); return; }
         if (!confirm(n + '日分の記録を読み込みます。現在の記録は置き換わります。よろしいですか?')) return;
         data = clean;
+        draft.key = '';
         persist();
         renderHome(); renderHistory();
         toast('読み込みました');
