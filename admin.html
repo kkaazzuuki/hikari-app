@@ -9,11 +9,11 @@
 <style>
 :root{
   --bg:#f6f3ec;--card:#ffffff;--ink:#222;--sub:#6b6b6b;--line:#e6e1d6;
-  --gold:#b37a00;--goldbg:#fff3d1;--blue:#2c5fa8;--bluebg:#e3edfb;--btn:#1f2a44;--btnink:#fff;--danger:#b3261e;--warn:#b26a00;
+  --gold:#b37a00;--goldbg:#fff3d1;--blue:#2c5fa8;--bluebg:#e3edfb;--btn:#1f2a44;--btnink:#fff;--danger:#b3261e;--warn:#b26a00;--san:#1f7a4d;
 }
 @media (prefers-color-scheme:dark){
   :root{--bg:#12151c;--card:#1c212c;--ink:#eee;--sub:#9aa0ac;--line:#2c3342;
-    --gold:#f0b429;--goldbg:#3a2f10;--blue:#7fb0f5;--bluebg:#15263f;--btn:#e8c872;--btnink:#1b1b1b;--danger:#f2b8b5;--warn:#f0b429}
+    --gold:#f0b429;--goldbg:#3a2f10;--blue:#7fb0f5;--bluebg:#15263f;--btn:#e8c872;--btnink:#1b1b1b;--danger:#f2b8b5;--warn:#f0b429;--san:#5fcf95}
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);
@@ -32,10 +32,10 @@ textarea{min-height:80px;margin:8px 0}
 input[type=file]{font-size:14px;max-width:100%}
 .msg{font-size:13px;margin-top:8px;line-height:1.6}
 .msg .ok{color:var(--blue)}.msg .ng{color:var(--danger)}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .stat{background:var(--bg);border-radius:12px;padding:10px 12px}
 .stat .l{font-size:12px;color:var(--sub)}.stat .v{font-size:20px;font-weight:700;margin-top:2px}
-.stat .v.g{color:var(--gold)}.stat .v.b{color:var(--blue)}
+.stat .v.g{color:var(--gold)}.stat .v.b{color:var(--blue)}.stat .v.p{color:var(--san)}
 .ctl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 .ctl label{font-size:12px;color:var(--sub);display:block;margin-bottom:4px}
 .tw{overflow-x:auto}
@@ -45,7 +45,7 @@ th:first-child,td:first-child{text-align:left}
 th{font-size:12px;color:var(--sub);font-weight:600}
 tr.m{cursor:pointer}
 tr.m.off td:first-child{color:var(--sub)}
-td.s{color:var(--gold);font-weight:700}td.j{color:var(--blue)}
+td.s{color:var(--gold);font-weight:700}td.j{color:var(--blue)}td.p{color:var(--san);font-weight:700}
 .warn{color:var(--warn);font-weight:700}.bad{color:var(--danger);font-weight:700}
 tr.d td{background:var(--bg);text-align:left;white-space:normal;font-size:13px;line-height:1.9}
 tfoot td{font-weight:700;border-top:2px solid var(--line)}
@@ -68,7 +68,7 @@ details.fold summary{cursor:pointer;font-size:14px;color:var(--blue)}
 .bar .bl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar .bt{background:var(--bg);border-radius:6px;height:16px;overflow:hidden}
 .bar .bf{height:100%;border-radius:6px}
-.bar .bf.g{background:var(--gold)}.bar .bf.b{background:var(--blue)}
+.bar .bf.g{background:var(--gold)}.bar .bf.b{background:var(--blue)}.bar .bf.p{background:var(--san)}
 .bar .bv{text-align:right;font-weight:700;white-space:nowrap}
 .gtab{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:14px;cursor:pointer;font-family:inherit}
 .gtab.on{background:var(--btn);color:var(--btnink);border-color:var(--btn);font-weight:700}
@@ -157,6 +157,7 @@ details.fold summary{cursor:pointer;font-size:14px;color:var(--blue)}
           <option value="name">名前順</option>
           <option value="seko">施光が多い順</option>
           <option value="juko">受光時間が長い順</option>
+          <option value="san">道場参拝が多い順</option>
           <option value="rep">最終報告が古い順</option>
         </select>
       </div>
@@ -183,6 +184,7 @@ details.fold summary{cursor:pointer;font-size:14px;color:var(--blue)}
         <select id="chartMetric">
           <option value="seko">施光(回数)</option>
           <option value="juko">受光(時間)</option>
+          <option value="san">道場参拝(日数)</option>
         </select>
       </div>
     </div>
@@ -214,6 +216,7 @@ details.fold summary{cursor:pointer;font-size:14px;color:var(--blue)}
   <label for="eJuko">受光(その日の合計・分)</label>
   <input id="eJuko" type="number" inputmode="numeric" min="0" max="1440" placeholder="未記録">
   <label class="chk"><input type="checkbox" id="eRep" checked style="width:auto"> この人から報告を受け取った日として記録する</label>
+  <label class="chk" for="eSan"><input type="checkbox" id="eSan" style="width:22px;height:22px;flex:none"> 道場参拝 ○(参拝した)</label>
   <div class="note" id="ePrev"></div>
   <div class="row" style="margin-top:16px">
     <button class="btn" id="eSave">保存</button>

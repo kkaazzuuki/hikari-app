@@ -21,11 +21,14 @@
   }
   function rec(k) {
     var r = data[k];
-    return { seko: (r && r.seko) || 0, juko: (r && r.juko != null) ? r.juko : null };
+    return { seko: (r && r.seko) || 0, juko: (r && r.juko != null) ? r.juko : null, san: !!(r && r.san) };
   }
   function setRec(k, r) {
-    if (!r.seko && r.juko == null) delete data[k];
-    else data[k] = { seko: r.seko || 0, juko: r.juko, u: new Date().toISOString() };
+    if (!r.seko && r.juko == null && !r.san) delete data[k];
+    else {
+      data[k] = { seko: r.seko || 0, juko: r.juko, u: new Date().toISOString() };
+      if (r.san) data[k].san = true;
+    }
     persist();
   }
   function clampInt(v, max) {
@@ -43,23 +46,25 @@
   function shortMin(m) { return Math.floor(m / 60) + ':' + pad(m % 60); }
 
   function sumRange(filter) {
-    var seko = 0, juko = 0, jd = 0, sd = 0;
+    var seko = 0, juko = 0, jd = 0, sd = 0, pd = 0;
     for (var k in data) {
       if (!filter(k)) continue;
       var r = data[k];
       if (r.seko) { seko += r.seko; sd++; }
       if (r.juko) { juko += r.juko; jd++; }
+      if (r.san) pd++;
     }
-    return { seko: seko, juko: juko, jd: jd, sd: sd };
+    return { seko: seko, juko: juko, jd: jd, sd: sd, pd: pd };
   }
-  function statHtml(label, value, cls) {
-    return '<div class="stat"><div class="l">' + label + '</div><div class="v ' + (cls || '') + '">' + value + '</div></div>';
+  function statHtml(label, value, cls, style) {
+    return '<div class="stat"' + (style ? ' style="' + style + '"' : '') + '><div class="l">' + label + '</div><div class="v ' + (cls || '') + '">' + value + '</div></div>';
   }
   function statsBlock(s) {
     return statHtml('施光 合計', s.seko + '回', 'g') +
            statHtml('受光 合計', fmtMin(s.juko || 0), 'b') +
            statHtml('受光した日数', s.jd + '日') +
-           statHtml('施光 1日平均', s.sd ? (s.seko / s.sd).toFixed(1) + '回' : '—');
+           statHtml('施光 1日平均', s.sd ? (s.seko / s.sd).toFixed(1) + '回' : '—') +
+           statHtml('道場参拝', s.pd + '日', '', 'grid-column:1/-1;color:var(--san)');
   }
 
   // ---------- トースト ----------
@@ -105,6 +110,11 @@
       ? '<span class="pill off">' + (selKey ? 'この日' : '本日') + 'は未記録</span>'
       : '<span class="pill on">' + (selKey ? 'この日' : '本日') + 'の合計:' + fmtMin(r.juko) + '</span>';
     updateJukoPreview();
+    $('#sanTitle').textContent = selKey ? 'この日に参拝したか' : '今日参拝したか';
+    $('#sanYes').className = r.san ? 'on-yes' : '';
+    $('#sanNo').className = r.san ? '' : 'on-no';
+    $('#sanYes').setAttribute('aria-pressed', r.san ? 'true' : 'false');
+    $('#sanNo').setAttribute('aria-pressed', r.san ? 'false' : 'true');
 
     var prefix = key.slice(0, 8);
     $('#homeStatsTitle').textContent = (+p[1]) + '月のまとめ';
@@ -135,6 +145,17 @@
     if (navigator.vibrate) navigator.vibrate(15);
   });
   $('#sekoMinus').addEventListener('click', function () { changeSeko(-1); });
+  function setSan(v) {
+    var key = curKey();
+    var r = rec(key);
+    if (r.san === v) return;
+    r.san = v;
+    setRec(key, r);
+    renderHome();
+    toast(v ? '道場参拝 ○ を記録しました' : '道場参拝 × にしました');
+  }
+  $('#sanYes').addEventListener('click', function () { setSan(true); if (navigator.vibrate) navigator.vibrate(15); });
+  $('#sanNo').addEventListener('click', function () { setSan(false); });
   $('#sekoInput').addEventListener('change', function () {
     var key = curKey();
     var r = rec(key);
@@ -213,8 +234,8 @@
       var k = prefix + pad(d);
       var r = data[k];
       var future = k > todayKey;
-      html += '<button class="cell' + (r && (r.seko || r.juko) ? ' has' : '') + (k === todayKey ? ' today' : '') + '" data-k="' + k + '"' + (future ? ' disabled' : '') + '>' +
-        '<span class="dn">' + d + '</span>' +
+      html += '<button class="cell' + (r && (r.seko || r.juko || r.san) ? ' has' : '') + (k === todayKey ? ' today' : '') + '" data-k="' + k + '"' + (future ? ' disabled' : '') + '>' +
+        '<span class="dn">' + d + (r && r.san ? '<b class="mk">○</b>' : '') + '</span>' +
         (r && r.seko ? '<span class="s">' + r.seko + '</span>' : '') +
         (r && r.juko ? '<span class="j">' + r.juko + '分</span>' : '') +
         '</button>';
@@ -225,17 +246,18 @@
     var weeks = [], w = null;
     for (var dd = 1; dd <= days; dd++) {
       var dow = new Date(y, m, dd).getDay();
-      if (!w || dow === 0) { w = { from: dd, to: dd, seko: 0, juko: 0, jd: 0 }; weeks.push(w); }
+      if (!w || dow === 0) { w = { from: dd, to: dd, seko: 0, juko: 0, jd: 0, pd: 0 }; weeks.push(w); }
       w.to = dd;
       var rr = data[prefix + pad(dd)];
       if (rr) {
         if (rr.seko) w.seko += rr.seko;
         if (rr.juko) { w.juko += rr.juko; w.jd++; }
+        if (rr.san) w.pd++;
       }
     }
     $('#weeks').innerHTML = weeks.map(function (x) {
       return '<div class="week"><div>' + (m + 1) + '/' + x.from + ' 〜 ' + (m + 1) + '/' + x.to + '</div>' +
-        '<div class="r"><span class="s">' + x.seko + '回</span>　<span class="j">' + (x.jd ? fmtMin(x.juko) + '(' + x.jd + '日)' : '—') + '</span></div></div>';
+        '<div class="r"><span class="s">' + x.seko + '回</span>　<span class="j">' + (x.jd ? fmtMin(x.juko) + '(' + x.jd + '日)' : '—') + '</span>' + (x.pd ? '　<span class="p">参拝' + x.pd + '日</span>' : '') + '</div></div>';
     }).join('');
   }
 
@@ -262,6 +284,7 @@
     var r = rec(k);
     $('#dlgSeko').value = r.seko;
     $('#dlgJuko').value = r.juko == null ? '' : r.juko;
+    $('#dlgSan').checked = r.san;
     updateDlgPreview();
     $('#dlg').showModal();
   }
@@ -275,14 +298,14 @@
     var jv = $('#dlgJuko').value;
     var juko = null;
     if (jv !== '') { juko = clampInt(jv, MAX_JUKO); if (juko < 1) juko = null; }
-    setRec(editKey, { seko: seko, juko: juko });
+    setRec(editKey, { seko: seko, juko: juko, san: $('#dlgSan').checked });
     $('#dlg').close();
     renderHistory(); renderHome();
     toast('保存しました');
   });
   $('#dlgDelete').addEventListener('click', function () {
     if (!confirm('この日の記録をすべて消しますか?')) return;
-    setRec(editKey, { seko: 0, juko: null });
+    setRec(editKey, { seko: 0, juko: null, san: false });
     $('#dlg').close();
     renderHistory(); renderHome();
   });
@@ -316,7 +339,8 @@
           var seko = clampInt(r.seko, MAX_SEKO);
           var juko = (r.juko == null) ? null : clampInt(r.juko, MAX_JUKO);
           if (juko === 0) juko = null;
-          if (seko || juko != null) { clean[k] = { seko: seko, juko: juko }; n++; }
+          var san = !!r.san;
+          if (seko || juko != null || san) { clean[k] = { seko: seko, juko: juko }; if (san) clean[k].san = true; n++; }
         }
         if (!n) { toast('読み込める記録がありませんでした'); return; }
         if (!confirm(n + '日分の記録を読み込みます。現在の記録は置き換わります。よろしいですか?')) return;
@@ -369,7 +393,7 @@
     var lines = ['【光の記録】', '名前:' + $('#sendName').value.trim(), '送信:' + new Date().toISOString()];
     keys.forEach(function (k) {
       var r = data[k];
-      lines.push(k + ' 施光' + (r.seko || 0) + '回' + (r.juko ? ' 受光' + r.juko + '分' : ''));
+      lines.push(k + ' 施光' + (r.seko || 0) + '回' + (r.juko ? ' 受光' + r.juko + '分' : '') + (r.san ? ' 参拝○' : ''));
     });
     return { text: lines.join('\n'), days: keys.length };
   }

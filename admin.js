@@ -151,6 +151,11 @@
   }
 
   // ---------- 読み込み ----------
+  function dayRec(e) {
+    var r = { seko: e.seko, juko: e.juko };
+    if (e.san) r.san = true;
+    return r;
+  }
   // 新規・更新・変更なしの日数を数えて返す
   function merge(name, entries, stamp) {
     var m = ensure(name);
@@ -158,20 +163,20 @@
     var rs = stamp || new Date().toISOString();
     if (rs > (m.reported || '')) m.reported = rs;
     entries.forEach(function (e) {
-      if (!e.seko && e.juko == null) return;
+      if (!e.seko && e.juko == null && !e.san) return;
       var old = m.days[e.k];
       if (old) {
-        if (old.seko === e.seko && (old.juko || null) === (e.juko || null)) {
+        if (old.seko === e.seko && (old.juko || null) === (e.juko || null) && !!old.san === !!e.san) {
           c.same++;
           if (!m.stamps[e.k] || m.stamps[e.k] < rs) m.stamps[e.k] = rs;
           return;
         }
         if (m.stamps[e.k] && m.stamps[e.k] > rs) return; // もっと新しい記録がある
-        m.days[e.k] = { seko: e.seko, juko: e.juko };
+        m.days[e.k] = dayRec(e);
         m.stamps[e.k] = rs;
         c.updated++;
       } else {
-        m.days[e.k] = { seko: e.seko, juko: e.juko };
+        m.days[e.k] = dayRec(e);
         m.stamps[e.k] = rs;
         c.added++;
       }
@@ -186,12 +191,12 @@
     var name = nm[1].trim().slice(0, 40);
     var st = /送信[:：]\s*(\S+)/.exec(block);
     var stamp = st ? st[1] : '';
-    var re = /(\d{4}-\d{2}-\d{2})\s*施光\s*(\d+)\s*回(?:\s*受光\s*(\d+)\s*分)?/g;
+    var re = /(\d{4}-\d{2}-\d{2})\s*施光\s*(\d+)\s*回(?:\s*受光\s*(\d+)\s*分)?(\s*参拝\s*[○〇◯])?/g;
     var entries = [], x;
     while ((x = re.exec(block))) {
       var juko = x[3] ? clamp(x[3], 1440) : null;
       if (juko === 0) juko = null;
-      entries.push({ k: x[1], seko: clamp(x[2], 9999), juko: juko });
+      entries.push({ k: x[1], seko: clamp(x[2], 9999), juko: juko, san: !!x[4] });
     }
     if (!entries.length) return { ok: false, msg: name + 'さんの記録が見つかりません' };
     return { ok: true, name: name, c: merge(name, entries, stamp) };
@@ -214,7 +219,7 @@
       var r = obj.data[k] || {};
       var juko = (r.juko == null) ? null : clamp(r.juko, 1440);
       if (juko === 0) juko = null;
-      entries.push({ k: k, seko: clamp(r.seko, 9999), juko: juko });
+      entries.push({ k: k, seko: clamp(r.seko, 9999), juko: juko, san: !!r.san });
     }
     return { ok: true, name: name, c: merge(name, entries, String(obj.exportedAt || '')) };
   }
@@ -297,12 +302,13 @@
     var period = $('#period').value;
     var rows = Object.keys(members).map(function (nm) {
       var m = members[nm], d = m.days;
-      var x = { name: nm, seko: 0, juko: 0, jd: 0, sd: 0, last: '', list: [], reported: m.reported || '', inactive: !!m.inactive };
+      var x = { name: nm, seko: 0, juko: 0, jd: 0, sd: 0, pd: 0, last: '', list: [], reported: m.reported || '', inactive: !!m.inactive };
       Object.keys(d).sort().forEach(function (k) {
         if (period !== 'all' && k.slice(0, 7) !== period) return;
         var r = d[k];
         if (r.seko) { x.seko += r.seko; x.sd++; }
         if (r.juko) { x.juko += r.juko; x.jd++; }
+        if (r.san) x.pd++;
         x.last = k;
         x.list.push(k);
       });
@@ -312,6 +318,7 @@
     rows.sort(function (a, b) {
       if (s === 'seko' && b.seko !== a.seko) return b.seko - a.seko;
       if (s === 'juko' && b.juko !== a.juko) return b.juko - a.juko;
+      if (s === 'san' && b.pd !== a.pd) return b.pd - a.pd;
       if (s === 'rep' && a.reported !== b.reported) return a.reported < b.reported ? -1 : 1;
       return a.name.localeCompare(b.name, 'ja');
     });
@@ -349,12 +356,12 @@
   }
   function renderChart(rows) {
     var metric = $('#chartMetric').value, mode = $('#chartMode').value;
-    var isS = metric === 'seko';
-    var fmt = isS ? function (v) { return v + '回'; } : fmtMin;
-    var cls = isS ? 'g' : 'b';
+    var fmt = metric === 'seko' ? function (v) { return v + '回'; } : metric === 'san' ? function (v) { return v + '日'; } : fmtMin;
+    var cls = metric === 'seko' ? 'g' : metric === 'san' ? 'p' : 'b';
+    function val(x) { return metric === 'seko' ? x.seko : metric === 'san' ? x.pd : x.juko; }
     var items;
     if (mode === 'member') {
-      items = rows.map(function (x) { return { l: x.name, v: isS ? x.seko : x.juko }; })
+      items = rows.map(function (x) { return { l: x.name, v: val(x) }; })
         .sort(function (a, b) { return b.v - a.v; });
     } else {
       var sum = {};
@@ -362,7 +369,7 @@
         var d = members[nm].days;
         Object.keys(d).forEach(function (k) {
           var mo = k.slice(0, 7);
-          sum[mo] = (sum[mo] || 0) + (isS ? (d[k].seko || 0) : (d[k].juko || 0));
+          sum[mo] = (sum[mo] || 0) + (metric === 'seko' ? (d[k].seko || 0) : metric === 'san' ? (d[k].san ? 1 : 0) : (d[k].juko || 0));
         });
       });
       items = Object.keys(sum).sort().slice(-12).map(function (mo) {
@@ -390,25 +397,26 @@
     else sel.value = months.length ? months[0] : 'all';
 
     var rows = compute();
-    var tS = 0, tJ = 0;
-    rows.forEach(function (x) { tS += x.seko; tJ += x.juko; });
+    var tS = 0, tJ = 0, tP = 0;
+    rows.forEach(function (x) { tS += x.seko; tJ += x.juko; tP += x.pd; });
 
     $('#summary').innerHTML =
       '<div class="stat"><div class="l">人数</div><div class="v">' + rows.length + '人</div></div>' +
       '<div class="stat"><div class="l">施光 合計</div><div class="v g">' + tS + '回</div></div>' +
-      '<div class="stat"><div class="l">受光 合計</div><div class="v b">' + fmtMin(tJ) + '</div></div>';
+      '<div class="stat"><div class="l">受光 合計</div><div class="v b">' + fmtMin(tJ) + '</div></div>' +
+      '<div class="stat"><div class="l">道場参拝(延べ)</div><div class="v p">' + tP + '日</div></div>';
 
-    var html = '<thead><tr><th>名前</th><th>施光</th><th>受光</th><th>最終報告</th></tr></thead><tbody>';
+    var html = '<thead><tr><th>名前</th><th>施光</th><th>受光</th><th>参拝</th><th>最終報告</th></tr></thead><tbody>';
     rows.forEach(function (x) {
       html += '<tr class="m' + (x.inactive ? ' off' : '') + '" data-n="' + esc(x.name) + '"><td>' + esc(x.name) + (x.inactive ? '(休止)' : '') + '</td>' +
-        '<td class="s">' + x.seko + '回</td><td class="j">' + fmtMin(x.juko) + '</td><td>' + (x.inactive && !x.reported ? '—' : repLabel(x.reported)) + '</td></tr>';
+        '<td class="s">' + x.seko + '回</td><td class="j">' + fmtMin(x.juko) + '</td><td class="p">' + x.pd + '日</td><td>' + (x.inactive && !x.reported ? '—' : repLabel(x.reported)) + '</td></tr>';
       if (open[x.name]) {
         var m = members[x.name], d = m.days;
-        html += '<tr class="d"><td colspan="4">' +
+        html += '<tr class="d"><td colspan="5">' +
           '<div style="color:var(--sub)">受光した日 ' + x.jd + '日 / 最終記録 ' + (x.last ? shortDate(x.last) : '—') + ' / 最終報告 ' + repDateTime(x.reported) + '</div>' +
           (x.list.length ? x.list.map(function (k) {
             var r = d[k];
-            return shortDate(k) + ' 施光 ' + r.seko + '回 / 受光 ' + (r.juko ? fmtMin(r.juko) : '—') +
+            return shortDate(k) + ' 施光 ' + r.seko + '回 / 受光 ' + (r.juko ? fmtMin(r.juko) : '—') + ' / 参拝 ' + (r.san ? '<span style="color:var(--san);font-weight:700">○</span>' : '×') +
               ' <button class="ed" data-edit="' + esc(x.name) + '" data-k="' + k + '">修正</button>';
           }).join('<br>') : 'この期間の記録はありません') +
           '<br><button class="ed" data-add="' + esc(x.name) + '" style="padding-left:0">＋この人の記録を追加</button>' +
@@ -416,7 +424,7 @@
           '<button class="ed dn" data-del="' + esc(x.name) + '">この人を削除</button></td></tr>';
       }
     });
-    html += '</tbody><tfoot><tr><td>合計</td><td class="s">' + tS + '回</td><td class="j">' + fmtMin(tJ) + '</td><td></td></tr></tfoot>';
+    html += '</tbody><tfoot><tr><td>合計</td><td class="s">' + tS + '回</td><td class="j">' + fmtMin(tJ) + '</td><td class="p">' + tP + '日</td><td></td></tr></tfoot>';
     $('#table').innerHTML = html;
     renderChart(rows);
   }
@@ -469,9 +477,9 @@
     var rows = compute();
     function q(s) { return '"' + String(s).replace(/"/g, '""') + '"'; }
     var p = $('#period').value;
-    var lines = ['グループ,名前,施光合計(回),受光合計(分),受光日数,最終記録日,最終報告日時,休止中'];
+    var lines = ['グループ,名前,施光合計(回),受光合計(分),受光日数,道場参拝(日),最終記録日,最終報告日時,休止中'];
     rows.forEach(function (x) {
-      lines.push([q(gname()), q(x.name), x.seko, x.juko, x.jd, x.last, q(x.reported), x.inactive ? '休止' : ''].join(','));
+      lines.push([q(gname()), q(x.name), x.seko, x.juko, x.jd, x.pd, x.last, q(x.reported), x.inactive ? '休止' : ''].join(','));
     });
     var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv' });
     var a = document.createElement('a');
@@ -500,6 +508,7 @@
     var r = (members[n] && members[n].days[k]) || null;
     $('#eSeko').value = r ? r.seko : 0;
     $('#eJuko').value = r && r.juko ? r.juko : '';
+    $('#eSan').checked = !!(r && r.san);
     $('#ePrev').textContent = r ? 'この日の記録があります。保存すると上書きされます' : 'この日の記録はまだありません(新しく追加されます)';
   }
   $('#addMember').addEventListener('click', function () { openEdit(null, null); });
@@ -515,8 +524,9 @@
     var juko = clamp($('#eJuko').value, 1440) || null;
     var m = ensure(name);
     var now = new Date().toISOString();
-    if (!seko && juko == null) { delete m.days[k]; delete m.stamps[k]; }
-    else { m.days[k] = { seko: seko, juko: juko }; m.stamps[k] = now; }
+    var san = $('#eSan').checked;
+    if (!seko && juko == null && !san) { delete m.days[k]; delete m.stamps[k]; }
+    else { m.days[k] = dayRec({ seko: seko, juko: juko, san: san }); m.stamps[k] = now; }
     if ($('#eRep').checked) m.reported = now;
     saveStore();
     $('#eDlg').close();
@@ -567,9 +577,10 @@
         var seko = clamp(r.seko, 9999);
         var juko = (r.juko == null) ? null : (clamp(r.juko, 1440) || null);
         var stamp = String(st[k] || '');
-        if (!seko && juko == null) return;
+        var san = !!r.san;
+        if (!seko && juko == null && !san) return;
         if (m.stamps[k] && m.stamps[k] > stamp) return;
-        m.days[k] = { seko: seko, juko: juko };
+        m.days[k] = dayRec({ seko: seko, juko: juko, san: san });
         m.stamps[k] = stamp;
         n++;
       });
