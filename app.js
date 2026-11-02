@@ -98,7 +98,7 @@
     var key = curKey();
     var p = key.split('-');
     var dt = new Date(+p[0], +p[1] - 1, +p[2]);
-    $('#todayLabel').textContent = p[0] + '年' + (+p[1]) + '月' + (+p[2]) + '日(' + WD[dt.getDay()] + ')' + (selKey ? '' : ' 今日');
+    $('#todayLabel').innerHTML = p[0] + '年' + (+p[1]) + '月' + (+p[2]) + '日(' + WD[dt.getDay()] + ')' + (selKey ? '' : ' <span class="tdy">今日</span>');
     $('#dateInput').max = todayKey;
     $('#dateInput').value = key;
     $('#dNext').disabled = !selKey;
@@ -479,6 +479,11 @@
   var TABS = ['home', 'history', 'report'];
   var reportInit = false;
   function showTab(name) {
+    if ($('#view-home').classList.contains('active') && name !== 'home' && isDirty()) {
+      if (!confirm('保存していない入力があります。このまま移動すると、入力は破棄されます。移動しますか?')) return;
+      draft.key = '';
+      $('#jukoInput').value = '';
+    }
     TABS.forEach(function (t) {
       var cap = t.charAt(0).toUpperCase() + t.slice(1);
       $('#view-' + t).classList.toggle('active', t === name);
@@ -495,6 +500,18 @@
   $('#tabHome').addEventListener('click', function () { showTab('home'); });
   $('#tabHistory').addEventListener('click', function () { showTab('history'); });
   $('#tabReport').addEventListener('click', function () { showTab('report'); });
+
+  // 保存していない入力があるまま、閉じたり移動したりしようとしたとき
+  window.addEventListener('beforeunload', function (e) {
+    if (isDirty()) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // 「?」で説明の表示・非表示
+  document.addEventListener('click', function (e) {
+    var q = e.target.closest('.qbtn');
+    if (q) q.closest('.card').classList.toggle('show-help');
+  });
+  if (window.hikariPrefs) window.hikariPrefs.mount($('#prefsMount'));
 
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') {

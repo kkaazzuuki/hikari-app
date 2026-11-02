@@ -1,0 +1,39 @@
+/* 光の記録:色(背景)の設定。アプリと管理者ページで共通 */
+:root, html[data-theme="white"] {
+  color-scheme: light;
+  --bg: #ffffff; --card: #ffffff; --soft: #f5f5f2;
+  --ink: #222222; --sub: #6b6b6b; --line: #e4e2dc;
+  --gold: #b37a00; --goldbg: #fff3d1;
+  --blue: #2c5fa8; --bluebg: #e3edfb;
+  --btn: #1f2a44; --btnink: #ffffff;
+  --danger: #b3261e; --today: #c98a00; --san: #1f7a4d; --warn: #b26a00;
+}
+html[data-theme="cream"] {
+  color-scheme: light;
+  --bg: #f6f3ec; --card: #ffffff; --soft: #f6f3ec; --line: #e6e1d6;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #181c24; --card: #222833; --soft: #181c24;
+  --ink: #eeeeee; --sub: #a3a9b5; --line: #343c4b;
+  --gold: #f0b429; --goldbg: #3a2f10;
+  --blue: #7fb0f5; --bluebg: #15263f;
+  --btn: #e8c872; --btnink: #1b1b1b;
+  --danger: #f2b8b5; --today: #f0b429; --san: #5fcf95; --warn: #f0b429;
+}
+html[data-theme="dark"] .round.plus,
+html[data-theme="dark"] .btn.commit.dirty { color: #1b1b1b; }
+html[data-theme="dark"] .seg button.on-yes { color: #10281c; }
+
+/* 文字の大きさ */
+html[data-fs="large"] body { zoom: 1.18; }
+
+/* 表示設定の部品 */
+.prefs .pl { font-size: 13px; color: var(--sub); margin: 12px 0 6px; }
+.prefs .pl:first-child { margin-top: 0; }
+.prefs .opts { display: flex; gap: 8px; flex-wrap: wrap; }
+.prefs .opt {
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  border-radius: 999px; padding: 9px 18px; font-size: 15px; cursor: pointer; font-family: inherit;
+}
+.prefs .opt.on { background: var(--btn); color: var(--btnink); border-color: var(--btn); font-weight: 700; }

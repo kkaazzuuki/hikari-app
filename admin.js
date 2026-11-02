@@ -409,7 +409,7 @@
     var html = '<thead><tr><th>名前</th><th>施光</th><th>受光</th><th>参拝</th><th>最終報告</th></tr></thead><tbody>';
     rows.forEach(function (x) {
       html += '<tr class="m' + (x.inactive ? ' off' : '') + '" data-n="' + esc(x.name) + '"><td>' + esc(x.name) + (x.inactive ? '(休止)' : '') + '</td>' +
-        '<td class="s">' + x.seko + '回</td><td class="j">' + fmtMin(x.juko) + '</td><td class="p">' + x.pd + '日</td><td>' + (x.inactive && !x.reported ? '—' : repLabel(x.reported)) + '</td></tr>';
+        '<td class="s" data-label="施光">' + x.seko + '回</td><td class="j" data-label="受光">' + fmtMin(x.juko) + '</td><td class="p" data-label="参拝">' + x.pd + '日</td><td data-label="最終報告">' + (x.inactive && !x.reported ? '—' : repLabel(x.reported)) + '</td></tr>';
       if (open[x.name]) {
         var m = members[x.name], d = m.days;
         html += '<tr class="d"><td colspan="5">' +
@@ -424,7 +424,7 @@
           '<button class="ed dn" data-del="' + esc(x.name) + '">この人を削除</button></td></tr>';
       }
     });
-    html += '</tbody><tfoot><tr><td>合計</td><td class="s">' + tS + '回</td><td class="j">' + fmtMin(tJ) + '</td><td class="p">' + tP + '日</td><td></td></tr></tfoot>';
+    html += '</tbody><tfoot><tr><td>合計</td><td class="s" data-label="施光">' + tS + '回</td><td class="j" data-label="受光">' + fmtMin(tJ) + '</td><td class="p" data-label="参拝">' + tP + '日</td><td></td></tr></tfoot>';
     $('#table').innerHTML = html;
     renderChart(rows);
   }
@@ -657,6 +657,7 @@
   }
   $('#unlock').addEventListener('click', tryUnlock);
   $('#pass').addEventListener('keydown', function (e) { if (e.key === 'Enter') tryUnlock(); });
+  if (window.hikariPrefs) window.hikariPrefs.mount($('#prefsMount'));
   var saved = null;
   try { saved = localStorage.getItem(LSKEY); } catch (e) {}
   if (saved && saved === HASH) unlock();

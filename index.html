@@ -3,17 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#1f2a44">
+<meta name="theme-color" content="#ffffff">
 <title>光の記録</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
 <style>
-:root{
-  color-scheme:light;
-  --bg:#fbfaf7;--card:#ffffff;--ink:#222;--sub:#6b6b6b;--line:#e6e1d6;
-  --gold:#b37a00;--goldbg:#fff3d1;--blue:#2c5fa8;--bluebg:#e3edfb;
-  --btn:#1f2a44;--btnink:#fff;--danger:#b3261e;--today:#c98a00;--san:#1f7a4d;
-}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);
   font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
@@ -25,13 +21,13 @@ main{max-width:560px;margin:0 auto;padding:16px 16px calc(84px + env(safe-area-i
 .card h2 small{font-weight:400;font-size:12px;color:var(--sub);margin-left:6px}
 .hint{font-size:12px;color:var(--sub);margin-top:10px;text-align:center}
 .counter{display:flex;align-items:center;justify-content:center;gap:14px}
-.counter input{width:130px;text-align:center;font-size:56px;font-weight:700;border:none;background:transparent;color:var(--gold);padding:0;-moz-appearance:textfield}
+.counter input{width:130px;min-width:0;flex:0 1 130px;text-align:center;font-size:56px;font-weight:700;border:none;background:transparent;color:var(--gold);padding:0;-moz-appearance:textfield}
 input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.round{width:64px;height:64px;border-radius:50%;border:2px solid var(--line);background:var(--card);color:var(--ink);font-size:30px;cursor:pointer}
+.round{flex:none;width:64px;height:64px;border-radius:50%;border:2px solid var(--line);background:var(--card);color:var(--ink);font-size:30px;cursor:pointer}
 .round.plus{width:84px;height:84px;background:var(--gold);border-color:var(--gold);color:#fff;font-size:42px}
 .round:active{transform:scale(.94)}
 .row{display:flex;align-items:center;gap:8px}
-.row input{flex:1;min-width:0;font-size:22px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.row input{flex:1;min-width:0;font-size:22px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--soft);color:var(--ink)}
 .btn{background:var(--btn);color:var(--btnink);border:none;border-radius:10px;padding:12px 16px;font-size:16px;font-weight:700;cursor:pointer}
 .btn.sub{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
@@ -43,7 +39,7 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .pill.off{background:var(--line);color:var(--sub)}
 .preview{font-size:14px;color:var(--sub);margin-top:8px;min-height:20px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.stat{background:var(--bg);border-radius:12px;padding:10px 12px}
+.stat{background:var(--soft);border-radius:12px;padding:10px 12px}
 .stat .l{font-size:12px;color:var(--sub)}
 .stat .v{font-size:20px;font-weight:700;margin-top:2px}
 .stat .v.g{color:var(--gold)}.stat .v.b{color:var(--blue)}
@@ -54,12 +50,17 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .legend{font-size:12px;color:var(--sub);margin:0 2px 8px;display:flex;gap:14px}
 .legend .g{color:var(--gold)}.legend .b{color:var(--blue)}
 .cell.has{background:var(--goldbg)}
+.tdy{white-space:nowrap}
 .cell .mk{color:var(--san);font-weight:700;margin-left:2px;font-size:12px}
 .legend .p{color:var(--san)}
 .week .p{color:var(--san);font-size:12px}
-.commit-info{font-size:14px;color:var(--sub);margin-bottom:10px;text-align:center;line-height:1.6}
+#commitCard{position:sticky;bottom:calc(68px + env(safe-area-inset-bottom));z-index:5;padding:10px 14px;box-shadow:0 -6px 16px rgba(0,0,0,.10)}
+.commit-info{font-size:13px;color:var(--sub);margin-bottom:8px;text-align:center;line-height:1.5}
+.qbtn{margin-left:8px;width:24px;height:24px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--sub);font-size:13px;font-weight:700;cursor:pointer;vertical-align:middle;padding:0;font-family:inherit}
+.card .help{display:none}
+.card.show-help .help{display:block}
 .commit-info.dirty{color:var(--gold);font-weight:700}
-.btn.commit{width:100%;padding:16px 12px;font-size:18px}
+.btn.commit{width:100%;padding:14px 12px;font-size:18px}
 .btn.commit.dirty{background:var(--gold);color:#fff}
 .seg{display:flex;gap:10px}
 .seg button{flex:1;padding:16px 8px;font-size:17px;font-weight:700;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--sub);cursor:pointer;font-family:inherit}
@@ -92,14 +93,14 @@ dialog{border:none;border-radius:16px;padding:20px;width:min(92vw,420px);backgro
 dialog::backdrop{background:rgba(0,0,0,.45)}
 dialog h3{margin:0 0 14px}
 dialog label{display:block;font-size:13px;color:var(--sub);margin:12px 0 4px}
-dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--soft);color:var(--ink)}
 .actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
 .actions .btn{flex:1}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#222;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10}
 .toast.show{opacity:.95}
 .backup{display:flex;gap:8px}.backup .btn{flex:1;font-size:14px}
 .fl{display:block;font-size:13px;color:var(--sub);margin:12px 0 4px}
-.tx{width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:inherit}
+.tx{width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--soft);color:var(--ink);font-family:inherit}
 </style>
 </head>
 <body>
@@ -119,17 +120,17 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
   </div>
 
   <div class="card">
-    <h2>施光<small id="sekoTitle">今日の回数(何回でもOK)</small></h2>
+    <h2>施光<small id="sekoTitle">今日の回数(何回でもOK)</small><button class="qbtn" aria-label="説明を表示">?</button></h2>
     <div class="counter">
       <button class="round" id="sekoMinus" aria-label="1回減らす">−</button>
       <input id="sekoInput" type="number" inputmode="numeric" min="0" max="9999" value="0" aria-label="施光回数">
       <button class="round plus" id="sekoPlus" aria-label="1回増やす">＋</button>
     </div>
-    <div class="hint">＋で1回追加／数字をタップして直接入力もできます。入力したら、下の「追加・更新」を押してください。日付の◀▶や日付欄で、入力する日を変えられます</div>
+    <div class="hint help">＋で1回追加／数字をタップして直接入力もできます。入力したら、下の「追加・更新」を押してください。日付の◀▶や日付欄で、入力する日を変えられます</div>
   </div>
 
   <div class="card">
-    <h2>受光<small>1日の合計分数</small></h2>
+    <h2>受光<small>1日の合計分数</small><button class="qbtn" aria-label="説明を表示">?</button></h2>
     <div id="jukoState"></div>
     <div class="row">
       <input id="jukoInput" type="number" inputmode="numeric" min="1" max="1440" placeholder="追加する分数" aria-label="追加する受光時間(分)">
@@ -142,7 +143,7 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
       <button class="chip" data-add="120">+120</button>
     </div>
     <div class="preview" id="jukoPreview"></div>
-    <div class="hint" style="text-align:left;margin-top:0">入力した分数は、下の「追加・更新」を押すと、その日の合計に足されます。何回かに分けて受光したときも、そのつど足されます</div>
+    <div class="hint help" style="text-align:left;margin-top:0">入力した分数は、下の「追加・更新」を押すと、その日の合計に足されます。何回かに分けて受光したときも、そのつど足されます</div>
     <div class="row" style="gap:16px">
       <button class="link" id="jukoEdit">合計を修正する</button>
       <button class="link" id="jukoClear">この日の受光を消す</button>
@@ -159,7 +160,7 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
 
   <div class="card" id="commitCard">
     <div id="commitInfo" class="commit-info"></div>
-    <button class="btn commit" id="commitBtn">この日の記録を追加・更新する</button>
+    <button class="btn commit" id="commitBtn">記録を追加・更新する</button>
   </div>
 
   <div class="card">
@@ -186,7 +187,9 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
   </div>
 
   <details class="card">
-    <summary>その他(全期間の合計・バックアップ)</summary>
+    <summary>その他(表示設定・全期間の合計・バックアップ)</summary>
+    <h2 class="s2">表示設定</h2>
+    <div id="prefsMount"></div>
     <h2 class="s2">全期間の合計</h2>
     <div class="grid2" id="allStats"></div>
     <h2 class="s2">バックアップ</h2>
@@ -205,7 +208,7 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
   <div class="date">管理者に報告</div>
   <p class="sub" style="margin:0 2px 14px">自分の記録を、LINEで管理者に送ります</p>
   <div class="card">
-    <h2>LINEで管理者に報告</h2>
+    <h2>LINEで管理者に報告<button class="qbtn" aria-label="説明を表示">?</button></h2>
     <label class="fl" for="sendName">お名前(管理者が分かる名前)</label>
     <input id="sendName" class="tx" type="text" maxlength="30" placeholder="例:山田太郎" autocomplete="off">
     <label class="fl" for="sendPeriod">送る分</label>
@@ -221,7 +224,7 @@ dialog input{width:100%;font-size:22px;padding:10px 12px;border:1px solid var(--
       <button class="btn" id="sendBtn" style="background:#06c755;color:#fff">LINEで送る</button>
       <button class="btn sub" id="copyBtn">コピー</button>
     </div>
-    <div class="hint">「LINEで送る」を押すと、LINEの送信先の選択画面が開きます。管理者(またはグループ)を選んで送信してください。開かないときは「コピー」して、LINEに貼り付けて送ってください。送られる内容は、お名前と日ごとの施光回数・受光分数だけです。「LINEで送る」「コピー」を押した日時が、最終報告として記録されます</div>
+    <div class="hint help">「LINEで送る」を押すと、LINEの送信先の選択画面が開きます。管理者(またはグループ)を選んで送信してください。開かないときは「コピー」して、LINEに貼り付けて送ってください。送られる内容は、お名前と日ごとの施光回数・受光分数だけです。「LINEで送る」「コピー」を押した日時が、最終報告として記録されます</div>
   </div>
 </section>
 
